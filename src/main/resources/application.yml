@@ -1,0 +1,156 @@
+spring:
+  application:
+    name: prefeitura
+
+  config:
+    import: optional:file:.env[.properties]
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cidadeativa}
+    username: ${SPRING_DATASOURCE_USERNAME:cidadeativa}
+    password: ${SPRING_DATASOURCE_PASSWORD:cidadeativa}
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS_ENABLE:false}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+
+  servlet:
+    multipart:
+      max-file-size: ${DENUNCIA_ANEXOS_MAX_FILE_SIZE:10MB}
+      max-request-size: ${DENUNCIA_ANEXOS_MAX_REQUEST_SIZE:12MB}
+
+  data:
+    web:
+      pageable:
+        default-page-size: 20
+        max-page-size: 100
+
+server:
+  port: ${SERVER_PORT:8080}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  email:
+    envio-real-habilitado: ${MAIL_ENABLED:false}
+    notificacoes-habilitadas: ${MAIL_NOTIFICATIONS_ENABLED:false}
+    remetente: ${MAIL_FROM:no-reply@cidadeativa.local}
+    nome-remetente: ${MAIL_FROM_NAME:Cidade Ativa}
+
+  web:
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:${FRONTEND_URL:http://localhost:5173}}
+      allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}
+      allowed-headers: ${CORS_ALLOWED_HEADERS:Authorization,Content-Type,Accept,Origin,X-Requested-With}
+      exposed-headers: ${CORS_EXPOSED_HEADERS:Location,Content-Disposition,X-RateLimit-Limit,X-RateLimit-Remaining,Retry-After}
+      allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+      max-age: ${CORS_MAX_AGE:1h}
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET:dev-secret-change-me-with-at-least-32-chars}
+      issuer: ${JWT_ISSUER:cidade-ativa-api}
+      access-token-duration: ${JWT_ACCESS_TOKEN_DURATION:15m}
+      refresh-token-duration: ${JWT_REFRESH_TOKEN_DURATION:7d}
+    cookies:
+      secure: ${AUTH_COOKIE_SECURE:false}
+
+  limite-requisicao:
+    habilitado: ${RATE_LIMIT_ENABLED:true}
+    usar-x-forwarded-for: ${RATE_LIMIT_USE_X_FORWARDED_FOR:false}
+    login:
+      habilitado: true
+      max-requisicoes: ${RATE_LIMIT_LOGIN_MAX_REQUESTS:10}
+      janela: ${RATE_LIMIT_LOGIN_WINDOW:1m}
+    cadastro-morador:
+      habilitado: true
+      max-requisicoes: ${RATE_LIMIT_CADASTRO_MAX_REQUESTS:5}
+      janela: ${RATE_LIMIT_CADASTRO_WINDOW:1h}
+    refresh-token:
+      habilitado: true
+      max-requisicoes: ${RATE_LIMIT_REFRESH_MAX_REQUESTS:30}
+      janela: ${RATE_LIMIT_REFRESH_WINDOW:1m}
+    criacao-denuncia:
+      habilitado: true
+      max-requisicoes: ${RATE_LIMIT_DENUNCIA_MAX_REQUESTS:10}
+      janela: ${RATE_LIMIT_DENUNCIA_WINDOW:10m}
+    comentario:
+      habilitado: true
+      max-requisicoes: ${RATE_LIMIT_COMENTARIO_MAX_REQUESTS:30}
+      janela: ${RATE_LIMIT_COMENTARIO_WINDOW:10m}
+    interacao:
+      habilitado: true
+      max-requisicoes: ${RATE_LIMIT_INTERACAO_MAX_REQUESTS:60}
+      janela: ${RATE_LIMIT_INTERACAO_WINDOW:10m}
+    sinalizacao:
+      habilitado: true
+      max-requisicoes: ${RATE_LIMIT_SINALIZACAO_MAX_REQUESTS:10}
+      janela: ${RATE_LIMIT_SINALIZACAO_WINDOW:10m}
+    upload-anexo:
+      habilitado: true
+      max-requisicoes: ${RATE_LIMIT_UPLOAD_MAX_REQUESTS:20}
+      janela: ${RATE_LIMIT_UPLOAD_WINDOW:10m}
+    conta:
+      habilitado: true
+      max-requisicoes: ${RATE_LIMIT_CONTA_MAX_REQUESTS:10}
+      janela: ${RATE_LIMIT_CONTA_WINDOW:15m}
+
+  antispam:
+    habilitado: ${ANTISPAM_ENABLED:true}
+    max-links-denuncia: ${ANTISPAM_MAX_LINKS_DENUNCIA:2}
+    max-links-comentario: ${ANTISPAM_MAX_LINKS_COMENTARIO:1}
+    max-caracteres-repetidos-sequencia: ${ANTISPAM_MAX_CARACTERES_REPETIDOS_SEQUENCIA:12}
+    janela-denuncia-repetida: ${ANTISPAM_JANELA_DENUNCIA_REPETIDA:30m}
+    janela-comentario-repetido: ${ANTISPAM_JANELA_COMENTARIO_REPETIDO:10m}
+
+  admin-inicial:
+    habilitado: ${ADMIN_APP_ENABLED:false}
+    username: ${ADMIN_APP_USERNAME:}
+    email: ${ADMIN_APP_EMAIL:}
+    senha: ${ADMIN_APP_PASSWORD:}
+    nome: ${ADMIN_APP_NAME:Administrador do Sistema}
+    cidade: ${ADMIN_APP_CITY:Sistema}
+    bairro: ${ADMIN_APP_NEIGHBORHOOD:Sistema}
+
+  conta:
+    verificacao-email-token-duration: ${EMAIL_VERIFICATION_TOKEN_DURATION:24h}
+    recuperacao-senha-token-duration: ${PASSWORD_RESET_TOKEN_DURATION:30m}
+    frontend-url: ${FRONTEND_URL:http://localhost:5173}
+
+  storage:
+    denuncia-anexos-dir: ${DENUNCIA_ANEXOS_DIR:uploads/denuncias}
+    denuncia-anexos-max-bytes: ${DENUNCIA_ANEXOS_MAX_BYTES:10485760}
+    denuncia-imagem-max-largura: ${DENUNCIA_IMAGEM_MAX_LARGURA:1600}
+    denuncia-imagem-max-altura: ${DENUNCIA_IMAGEM_MAX_ALTURA:1600}
+    denuncia-imagem-qualidade: ${DENUNCIA_IMAGEM_QUALIDADE:0.82}

@@ -1,0 +1,9 @@
+package com.mykael.prefeitura.core.categoria;
+
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
+
+	List<Categoria> findByOrganizacaoResponsavelPadraoId(Long organizacaoId);
+}

@@ -1,0 +1,129 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:prefeitura_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  mail:
+    host: localhost
+    port: 1025
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+  flyway:
+    enabled: false
+
+  data:
+    web:
+      pageable:
+        default-page-size: 20
+        max-page-size: 100
+
+app:
+  email:
+    envio-real-habilitado: false
+    notificacoes-habilitadas: false
+    remetente: no-reply@cidadeativa.local
+    nome-remetente: Cidade Ativa
+
+  web:
+    cors:
+      allowed-origins:
+        - http://localhost:5173
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - Authorization
+        - Content-Type
+        - Accept
+        - Origin
+        - X-Requested-With
+      exposed-headers:
+        - Location
+        - Content-Disposition
+        - X-RateLimit-Limit
+        - X-RateLimit-Remaining
+        - Retry-After
+      allow-credentials: true
+      max-age: 1h
+
+  security:
+    jwt:
+      secret: test-secret-change-me-with-at-least-32-chars
+      issuer: cidade-ativa-api-test
+      access-token-duration: 15m
+      refresh-token-duration: 7d
+    cookies:
+      secure: false
+
+  limite-requisicao:
+    habilitado: false
+    usar-x-forwarded-for: false
+    login:
+      habilitado: true
+      max-requisicoes: 10
+      janela: 1m
+    cadastro-morador:
+      habilitado: true
+      max-requisicoes: 5
+      janela: 1h
+    refresh-token:
+      habilitado: true
+      max-requisicoes: 30
+      janela: 1m
+    criacao-denuncia:
+      habilitado: true
+      max-requisicoes: 10
+      janela: 10m
+    comentario:
+      habilitado: true
+      max-requisicoes: 30
+      janela: 10m
+    interacao:
+      habilitado: true
+      max-requisicoes: 60
+      janela: 10m
+    sinalizacao:
+      habilitado: true
+      max-requisicoes: 10
+      janela: 10m
+    upload-anexo:
+      habilitado: true
+      max-requisicoes: 20
+      janela: 10m
+    conta:
+      habilitado: true
+      max-requisicoes: 10
+      janela: 15m
+
+  antispam:
+    habilitado: true
+    max-links-denuncia: 2
+    max-links-comentario: 1
+    max-caracteres-repetidos-sequencia: 12
+    janela-denuncia-repetida: 30m
+    janela-comentario-repetido: 10m
+
+  admin-inicial:
+    habilitado: false
+
+  conta:
+    verificacao-email-token-duration: 24h
+    recuperacao-senha-token-duration: 30m
+    frontend-url: http://localhost:5173
+
+  storage:
+    denuncia-anexos-dir: build/test-uploads/denuncias
+    denuncia-anexos-max-bytes: 10485760
+    denuncia-imagem-max-largura: 1600
+    denuncia-imagem-max-altura: 1600
+    denuncia-imagem-qualidade: 0.82

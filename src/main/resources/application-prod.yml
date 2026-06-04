@@ -1,0 +1,19 @@
+# Configurações do Perfil de Produção (prod) - Cidade Ativa
+
+spring:
+  jpa:
+    show-sql: false # Evitar logs de SQL cru em produção por segurança e desempenho
+    properties:
+      hibernate:
+        format_sql: false
+
+springdoc:
+  api-docs:
+    enabled: false # Desativa a geração de OpenAPI endpoints públicos (/api-docs) em produção
+  swagger-ui:
+    enabled: false # Desativa a interface Swagger (/swagger-ui.html) em produção
+
+app:
+  security:
+    cookies:
+      secure: true # Força os cookies HttpOnly a serem transmitidos apenas via conexões seguras HTTPS

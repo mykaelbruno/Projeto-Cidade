@@ -1,0 +1,13 @@
+package com.mykael.prefeitura.core.sinalizacao;
+
+public enum MotivoSinalizacaoDenuncia {
+	IMAGEM_INADEQUADA,
+	SPAM,
+	FAKE_NEWS,
+	CONTEUDO_OFENSIVO,
+	DADOS_PESSOAIS_EXPOSTOS,
+	DENUNCIA_DUPLICADA,
+	LOCALIZACAO_INCORRETA,
+	CATEGORIA_INCORRETA,
+	OUTRO
+}

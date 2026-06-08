@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Bell, CheckCheck, FileText, Loader2, MessageCircle } from 'lucide-react';
+import { notifyNotificationsUpdated } from '../hooks/useUnreadNotificationsCount';
 import { notificacaoService } from '../services/notificacaoService';
 import type { NotificacaoResponseDTO, TipoNotificacao } from '../types/notificacao';
 import { Button } from './ui/button';
@@ -24,6 +25,7 @@ export function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProp
     try {
       const pagina = await notificacaoService.listarMinhas({ page: 0, size: 30 });
       setNotificacoes(pagina.content);
+      notifyNotificationsUpdated();
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Nao foi possivel carregar notificacoes.');
     } finally {
@@ -44,6 +46,7 @@ export function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProp
         setNotificacoes((current) =>
           current.map((item) => (item.id === atualizada.id ? atualizada : item)),
         );
+        notifyNotificationsUpdated();
       }
 
       if (notificacao.link) {
@@ -58,6 +61,7 @@ export function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProp
     try {
       await notificacaoService.marcarTodasComoLidas();
       setNotificacoes((current) => current.map((notificacao) => ({ ...notificacao, lida: true })));
+      notifyNotificationsUpdated();
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Nao foi possivel marcar notificacoes como lidas.');
     }
@@ -95,10 +99,13 @@ export function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProp
               {erro}
             </div>
           ) : notificacoes.length === 0 ? (
-            <div className="text-center py-12">
-              <Bell className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                Nenhuma notificacao no momento
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-12 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-card shadow-sm">
+                <Bell className="h-7 w-7 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground">Nenhuma notificacao por aqui</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Quando houver novidades sobre seus relatos, elas vao aparecer aqui.
               </p>
             </div>
           ) : (

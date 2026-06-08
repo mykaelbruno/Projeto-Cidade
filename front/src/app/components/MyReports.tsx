@@ -5,7 +5,6 @@ import {
   Clock,
   AlertTriangle,
   FileText,
-  Bell,
   User,
   ArrowLeft,
   AlertCircle,
@@ -19,9 +18,11 @@ import {
 } from 'lucide-react';
 import { Report } from './ReportCard';
 import { Logo } from './Logo';
+import { NotificationBellButton } from './NotificationBellButton';
 import { NotificationsDrawer } from './NotificationsDrawer';
 import { Button } from './ui/button';
 import { useUser } from '../contexts/UserContext';
+import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';
 
 interface MyReportsProps {
   reports: Report[];
@@ -146,6 +147,7 @@ function CompactReportCard({ report, onClick }: CompactReportCardProps) {
 export function MyReports({ reports, isLoading = false, error, onRetry, onReportClick }: MyReportsProps) {
   const navigate = useNavigate();
   const { usuario, logout } = useUser();
+  const { unreadCount } = useUnreadNotificationsCount();
   const [selectedFilter, setSelectedFilter] = useState<FilterTab>('all');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -165,13 +167,7 @@ export function MyReports({ reports, isLoading = false, error, onRetry, onReport
         <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
           <Logo size="md" showText={true} />
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsNotificationsOpen(true)}
-              className="relative p-2 hover:bg-muted rounded-lg transition-colors"
-            >
-              <Bell className="w-5 h-5 text-foreground" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-            </button>
+            <NotificationBellButton unreadCount={unreadCount} onClick={() => setIsNotificationsOpen(true)} />
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}

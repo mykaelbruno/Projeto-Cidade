@@ -7,7 +7,8 @@ export function NewReportPage() {
   return (
     <NewReportFlow
       onClose={() => navigate(-1)}
-      onComplete={(denunciaId) => navigate(`/relato/${denunciaId}`)}
+      onViewReport={(denunciaId) => navigate(`/relato/${denunciaId}`)}
+      onCreated={(denunciaId) => navigate('/feed', { state: { createdReportId: denunciaId } })}
     />
   );
 }

@@ -4,8 +4,9 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowLeft,
-  Bell,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   FileText,
   Flag,
@@ -22,6 +23,7 @@ import {
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Logo } from '../components/Logo';
+import { NotificationBellButton } from '../components/NotificationBellButton';
 import { NotificationsDrawer } from '../components/NotificationsDrawer';
 import { ReportLocationMap } from '../components/ReportLocationMap';
 import { Button } from '../components/ui/button';
@@ -40,6 +42,7 @@ import { denunciaService } from '../services/denunciaService';
 import { interacaoDenunciaService } from '../services/interacaoDenunciaService';
 import { mapDenunciaToReport } from '../mappers/denunciaMapper';
 import { useUser } from '../contexts/UserContext';
+import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';
 import type {
   AnexoDenunciaResponseDTO,
   ComentarioResponseDTO,
@@ -110,6 +113,7 @@ export function ReportDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { usuario, isMorador, logout } = useUser();
+  const { unreadCount } = useUnreadNotificationsCount();
   const denunciaId = Number(id);
   const [denuncia, setDenuncia] = useState<DenunciaResponseDTO | null>(null);
   const [anexos, setAnexos] = useState<AnexoDenunciaResponseDTO[]>([]);
@@ -130,6 +134,7 @@ export function ReportDetailPage() {
   const [comentarioAlvo, setComentarioAlvo] = useState<ComentarioResponseDTO | null>(null);
   const [motivo, setMotivo] = useState<MotivoSinalizacaoDenuncia>('SPAM');
   const [comentarioSinalizacao, setComentarioSinalizacao] = useState('');
+  const [imagemAtivaIndex, setImagemAtivaIndex] = useState(0);
 
   const carregarDetalhe = useCallback(async () => {
     if (!Number.isFinite(denunciaId)) {
@@ -184,6 +189,15 @@ export function ReportDetailPage() {
     () => anexos.filter((anexo) => anexo.contentType?.startsWith('image/')),
     [anexos],
   );
+
+  useEffect(() => {
+    if (imagens.length === 0) {
+      setImagemAtivaIndex(0);
+      return;
+    }
+
+    setImagemAtivaIndex((current) => Math.min(current, imagens.length - 1));
+  }, [imagens.length]);
 
   const podeValidarConclusao = Boolean(
     isMorador &&
@@ -365,14 +379,8 @@ export function ReportDetailPage() {
       <header className="sticky top-0 z-10 bg-card border-b border-border">
         <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
           <Logo size="md" showText={true} />
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsNotificationsOpen(true)}
-              className="relative p-2 hover:bg-muted rounded-lg transition-colors"
-            >
-              <Bell className="w-5 h-5 text-foreground" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-            </button>
+            <div className="flex items-center gap-3">
+            <NotificationBellButton unreadCount={unreadCount} onClick={() => setIsNotificationsOpen(true)} />
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -445,20 +453,59 @@ export function ReportDetailPage() {
                 <div className="space-y-3">
                   <div className="aspect-[4/3] lg:aspect-[1/1] w-full bg-muted relative overflow-hidden rounded-3xl border border-border shadow-sm">
                     <img
-                      src={getApiUrl(imagens[0].urlDownload)}
-                      alt={imagens[0].nomeOriginal}
+                      src={getApiUrl(imagens[imagemAtivaIndex].urlDownload)}
+                      alt={imagens[imagemAtivaIndex].nomeOriginal}
                       className="w-full h-full object-cover"
                     />
+                    {imagens.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setImagemAtivaIndex((current) => (current === 0 ? imagens.length - 1 : current - 1))}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImagemAtivaIndex((current) => (current + 1) % imagens.length)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </button>
+                        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/45 px-3 py-1.5 backdrop-blur-sm">
+                          {imagens.map((imagem, index) => (
+                            <button
+                              key={imagem.id}
+                              type="button"
+                              onClick={() => setImagemAtivaIndex(index)}
+                              className={`h-2.5 w-2.5 rounded-full transition-all ${
+                                index === imagemAtivaIndex ? 'bg-white scale-110' : 'bg-white/45'
+                              }`}
+                              aria-label={`Abrir foto ${index + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                   {imagens.length > 1 && (
                     <div className="grid grid-cols-4 gap-2">
-                      {imagens.slice(1, 5).map((anexo) => (
-                        <img
+                      {imagens.map((anexo, index) => (
+                        <button
                           key={anexo.id}
-                          src={getApiUrl(anexo.urlDownload)}
-                          alt={anexo.nomeOriginal}
-                          className="aspect-square rounded-xl border border-border object-cover shadow-sm"
-                        />
+                          type="button"
+                          onClick={() => setImagemAtivaIndex(index)}
+                          className={`aspect-square overflow-hidden rounded-xl border shadow-sm transition-all ${
+                            index === imagemAtivaIndex ? 'border-primary ring-2 ring-primary/20' : 'border-border'
+                          }`}
+                        >
+                          <img
+                            src={getApiUrl(anexo.urlDownload)}
+                            alt={anexo.nomeOriginal}
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
                       ))}
                     </div>
                   )}
@@ -707,7 +754,7 @@ export function ReportDetailPage() {
                     placeholder="Adicionar comentario..."
                     value={comentario}
                     onChange={(event) => setComentario(event.target.value)}
-                    className="min-h-12"
+                    className="min-h-12 border-border bg-background/80 shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
                   />
                   <button
                     onClick={enviarComentario}

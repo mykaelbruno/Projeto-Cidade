@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Bell, FileText, Loader2, MessageSquare, X } from 'lucide-react';
+import { notifyNotificationsUpdated } from '../hooks/useUnreadNotificationsCount';
 import { notificacaoService } from '../services/notificacaoService';
 import type { NotificacaoResponseDTO, TipoNotificacao } from '../types/notificacao';
 
@@ -22,6 +23,7 @@ export function NotificationsList({ userRole: _userRole = 'moderador' }: Notific
     try {
       const pagina = await notificacaoService.listarMinhas({ page: 0, size: 20 });
       setNotificacoes(pagina.content);
+      notifyNotificationsUpdated();
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Nao foi possivel carregar notificacoes.');
     } finally {
@@ -44,6 +46,7 @@ export function NotificationsList({ userRole: _userRole = 'moderador' }: Notific
       setNotificacoes((current) =>
         current.map((item) => (item.id === atualizada.id ? atualizada : item)),
       );
+      notifyNotificationsUpdated();
       abrirLink(atualizada);
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Nao foi possivel marcar notificacao como lida.');
@@ -54,6 +57,7 @@ export function NotificationsList({ userRole: _userRole = 'moderador' }: Notific
     try {
       await notificacaoService.marcarTodasComoLidas();
       setNotificacoes((current) => current.map((notificacao) => ({ ...notificacao, lida: true })));
+      notifyNotificationsUpdated();
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Nao foi possivel marcar notificacoes como lidas.');
     }
@@ -113,10 +117,13 @@ export function NotificationsList({ userRole: _userRole = 'moderador' }: Notific
                 <div className="p-6 text-center text-sm text-red-600">{erro}</div>
               ) : notificacoes.length === 0 ? (
                 <div className="p-8 text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-muted rounded-full mb-3">
+                  <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-muted shadow-sm">
                     <Bell className="w-6 h-6 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-muted-foreground">Nenhuma notificacao</p>
+                  <p className="text-sm font-medium text-foreground">Nenhuma notificacao</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Novas atualizacoes sobre seus relatos vao aparecer aqui.
+                  </p>
                 </div>
               ) : (
                 <div className="divide-y divide-border">

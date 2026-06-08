@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent, WheelEvent } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Bell,
   Plus,
   Layers,
   Navigation,
@@ -19,12 +18,14 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { NotificationBellButton } from '../components/NotificationBellButton';
 import { NotificationsDrawer } from '../components/NotificationsDrawer';
 import { Button } from '../components/ui/button';
 import { mapFeedItemToReport } from '../mappers/denunciaMapper';
 import { getApiErrorMessage } from '../services/apiClient';
 import { feedService } from '../services/feedService';
 import { useUser } from '../contexts/UserContext';
+import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';
 import type { Report } from '../components/ReportCard';
 import type { DenunciaResponseDTO } from '../types/denuncia';
 
@@ -240,6 +241,7 @@ function positionReports(reports: MapReport[], view: MapView, size: MapSize): Re
 export function MapPage() {
   const navigate = useNavigate();
   const { usuario, logout } = useUser();
+  const { unreadCount } = useUnreadNotificationsCount();
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{
     startX: number;
@@ -375,7 +377,6 @@ export function MapPage() {
   }
 
   function zoomMap(delta: number) {
-    setSelectedReport(null);
     setMapView((current) => ({
       ...current,
       zoom: Math.max(10, Math.min(18, current.zoom + delta)),
@@ -413,7 +414,6 @@ export function MapPage() {
       y: dragRef.current.center.y - deltaY,
     }, mapView.zoom);
 
-    setSelectedReport(null);
     setMapView((current) => ({
       ...current,
       centerLat: nextCenter.latitude,
@@ -439,13 +439,7 @@ export function MapPage() {
         <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
           <Logo size="md" showText={true} />
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsNotificationsOpen(true)}
-              className="relative p-2 hover:bg-muted rounded-lg transition-colors"
-            >
-              <Bell className="w-5 h-5 text-foreground" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-            </button>
+            <NotificationBellButton unreadCount={unreadCount} onClick={() => setIsNotificationsOpen(true)} />
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -648,6 +642,7 @@ export function MapPage() {
                   return (
                     <button
                       key={report.id}
+                      onPointerDown={(event) => event.stopPropagation()}
                       onClick={(event) => {
                         event.stopPropagation();
                         setSelectedReport(report);
@@ -676,102 +671,96 @@ export function MapPage() {
                 })}
 
                 {selectedReport && selectedPosition && (
-                  <>
-                    <div
-                      className="absolute inset-0 bg-black/10 z-20"
-                      onClick={() => setSelectedReport(null)}
-                    />
+                  <div
+                    className="absolute z-30 animate-in fade-in zoom-in-95 duration-200"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    style={{
+                      width: '320px',
+                      maxWidth: 'calc(100% - 48px)',
+                      left: selectedPosition.x < mapSize.width / 2 ? selectedPosition.x : 'auto',
+                      right: selectedPosition.x >= mapSize.width / 2 ? mapSize.width - selectedPosition.x : 'auto',
+                      top: selectedPosition.y < mapSize.height / 2 ? selectedPosition.y + 16 : 'auto',
+                      bottom: selectedPosition.y >= mapSize.height / 2 ? mapSize.height - selectedPosition.y + 16 : 'auto',
+                      transform: selectedPosition.x < mapSize.width / 2 ? 'translateX(-35%)' : 'translateX(35%)',
+                    }}
+                  >
+                    <div className="bg-card rounded-xl shadow-2xl border-2 border-primary/20 overflow-hidden relative">
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedReport(null);
+                        }}
+                        className="absolute top-2 right-2 z-10 w-7 h-7 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5 text-white" />
+                      </button>
 
-                    <div
-                      className="absolute z-30 animate-in fade-in zoom-in-95 duration-200"
-                      style={{
-                        width: '320px',
-                        maxWidth: 'calc(100% - 48px)',
-                        left: selectedPosition.x < mapSize.width / 2 ? selectedPosition.x : 'auto',
-                        right: selectedPosition.x >= mapSize.width / 2 ? mapSize.width - selectedPosition.x : 'auto',
-                        top: selectedPosition.y < mapSize.height / 2 ? selectedPosition.y + 16 : 'auto',
-                        bottom: selectedPosition.y >= mapSize.height / 2 ? mapSize.height - selectedPosition.y + 16 : 'auto',
-                        transform: selectedPosition.x < mapSize.width / 2 ? 'translateX(-35%)' : 'translateX(35%)',
-                      }}
-                    >
-                      <div className="bg-card rounded-xl shadow-2xl border-2 border-primary/20 overflow-hidden relative">
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setSelectedReport(null);
-                          }}
-                          className="absolute top-2 right-2 z-10 w-7 h-7 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5 text-white" />
-                        </button>
-
-                        {selectedReport.image && (
-                          <div className="h-32 bg-muted relative overflow-hidden">
-                            <img
-                              src={selectedReport.image}
-                              alt={selectedReport.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-
-                        <div className="p-3 space-y-2.5">
-                          <div className="flex items-start gap-1.5 flex-wrap pr-8">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                              {selectedReport.category}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              statusColors[selectedReport.status] || 'bg-gray-100 text-gray-700'
-                            }`}>
-                              {selectedReport.status}
-                            </span>
-                          </div>
-
-                          <div>
-                            <h3 className="font-display font-semibold text-sm text-foreground mb-0.5 line-clamp-2">
-                              {selectedReport.title}
-                            </h3>
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {selectedReport.description}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MapPin className="w-3 h-3" />
-                            <span className="line-clamp-1">{selectedReport.location}, {selectedReport.neighborhood}</span>
-                          </div>
-
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border">
-                            <div className="flex items-center gap-1">
-                              <ThumbsUp className="w-3.5 h-3.5" />
-                              <span className="font-medium">{selectedReport.supports}</span>
-                            </div>
-                            {selectedReport.urgencies > 0 && (
-                              <div className="flex items-center gap-1 text-amber-600">
-                                <AlertTriangle className="w-3.5 h-3.5" />
-                                <span className="font-medium">{selectedReport.urgencies}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1">
-                              <MessageCircle className="w-3.5 h-3.5" />
-                              <span className="font-medium">{selectedReport.comments}</span>
-                            </div>
-                            <div className="flex items-center gap-1 ml-auto">
-                              <Clock className="w-3 h-3" />
-                              <span className="text-xs">{selectedReport.timeAgo}</span>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => navigate(`/relato/${selectedReport.id}`)}
-                            className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-                          >
-                            Ver detalhes completos
-                          </button>
+                      {selectedReport.image && (
+                        <div className="h-32 bg-muted relative overflow-hidden">
+                          <img
+                            src={selectedReport.image}
+                            alt={selectedReport.title}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
+                      )}
+
+                      <div className="p-3 space-y-2.5">
+                        <div className="flex items-start gap-1.5 flex-wrap pr-8">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                            {selectedReport.category}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            statusColors[selectedReport.status] || 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {selectedReport.status}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h3 className="font-display font-semibold text-sm text-foreground mb-0.5 line-clamp-2">
+                            {selectedReport.title}
+                          </h3>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {selectedReport.description}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="w-3 h-3" />
+                          <span className="line-clamp-1">{selectedReport.location}, {selectedReport.neighborhood}</span>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border">
+                          <div className="flex items-center gap-1">
+                            <ThumbsUp className="w-3.5 h-3.5" />
+                            <span className="font-medium">{selectedReport.supports}</span>
+                          </div>
+                          {selectedReport.urgencies > 0 && (
+                            <div className="flex items-center gap-1 text-amber-600">
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              <span className="font-medium">{selectedReport.urgencies}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span className="font-medium">{selectedReport.comments}</span>
+                          </div>
+                          <div className="flex items-center gap-1 ml-auto">
+                            <Clock className="w-3 h-3" />
+                            <span className="text-xs">{selectedReport.timeAgo}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => navigate(`/relato/${selectedReport.id}`)}
+                          className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                        >
+                          Ver detalhes completos
+                        </button>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>

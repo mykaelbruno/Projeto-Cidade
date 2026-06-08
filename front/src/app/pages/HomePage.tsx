@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import {
-  Bell,
   Plus,
   MapPin,
   TrendingUp,
@@ -16,6 +15,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { NotificationBellButton } from '../components/NotificationBellButton';
 import { ReportCard, Report } from '../components/ReportCard';
 import { FilterModal } from '../components/FilterModal';
 import { NotificationsDrawer } from '../components/NotificationsDrawer';
@@ -37,6 +37,7 @@ import { feedService } from '../services/feedService';
 import { interacaoDenunciaService } from '../services/interacaoDenunciaService';
 import { mapFeedItemToReport } from '../mappers/denunciaMapper';
 import { useUser } from '../contexts/UserContext';
+import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';
 import type { PageResponse } from '../types/api';
 import type { CategoriaResponseDTO } from '../types/categoria';
 import type {
@@ -86,7 +87,9 @@ function getFeedStatus(filter: FilterTab): StatusDenuncia | null {
 
 export function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { usuario, logout } = useUser();
+  const { unreadCount } = useUnreadNotificationsCount();
   const [selectedCategoryId, setSelectedCategoryId] = useState('TODAS');
   const [categorias, setCategorias] = useState<CategoriaResponseDTO[]>([]);
   const [selectedFilter, setSelectedFilter] = useState<FilterTab>('mixed');
@@ -104,6 +107,20 @@ export function HomePage() {
   const [reportReason, setReportReason] = useState<MotivoSinalizacaoDenuncia>('SPAM');
   const [reportComment, setReportComment] = useState('');
   const [isSendingReport, setIsSendingReport] = useState(false);
+  const [createdReportId, setCreatedReportId] = useState<number | null>(null);
+  const [isCreatedDialogOpen, setIsCreatedDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const state = location.state as { createdReportId?: number } | null;
+
+    if (!state?.createdReportId) {
+      return;
+    }
+
+    setCreatedReportId(state.createdReportId);
+    setIsCreatedDialogOpen(true);
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.pathname, location.state, navigate]);
 
   const carregarFeed = useCallback(async () => {
     setIsLoadingFeed(true);
@@ -255,13 +272,7 @@ export function HomePage() {
         <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
           <Logo size="md" showText={true} />
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsNotificationsOpen(true)}
-              className="relative p-2 hover:bg-muted rounded-lg transition-colors"
-            >
-              <Bell className="w-5 h-5 text-foreground" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-            </button>
+            <NotificationBellButton unreadCount={unreadCount} onClick={() => setIsNotificationsOpen(true)} />
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -523,6 +534,31 @@ export function HomePage() {
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
       />
+
+      <Dialog open={isCreatedDialogOpen} onOpenChange={setIsCreatedDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Relato enviado com sucesso</DialogTitle>
+            <DialogDescription>
+              Seu relato ja entrou no fluxo da cidade. Voce pode continuar no feed ou abrir o detalhe agora.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreatedDialogOpen(false)}>
+              Fechar
+            </Button>
+            <Button
+              onClick={() => {
+                if (createdReportId) {
+                  navigate(`/relato/${createdReportId}`);
+                }
+              }}
+            >
+              Ir para o relato
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(reportTarget)} onOpenChange={(open) => !open && setReportTarget(null)}>
         <DialogContent>

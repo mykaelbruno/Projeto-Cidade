@@ -1,10 +1,9 @@
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
   Bug,
   Camera,
-  CheckCircle2,
   Droplet,
   Footprints,
   Heart,
@@ -18,8 +17,10 @@ import {
   Wrench,
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { ReportLocationMap } from './ReportLocationMap';
 import { categoriaService } from '../services/categoriaService';
 import { denunciaService } from '../services/denunciaService';
+import { geocodingService } from '../services/geocodingService';
 import { organizacaoService } from '../services/organizacaoService';
 import { getApiErrorMessage } from '../services/apiClient';
 import { useUser } from '../contexts/UserContext';
@@ -30,7 +31,8 @@ import type { BairroResponseDTO, OrganizacaoResponseDTO } from '../types/organiz
 
 interface NewReportFlowProps {
   onClose: () => void;
-  onComplete: (denunciaId: number) => void;
+  onCreated: (denunciaId: number) => void;
+  onViewReport: (denunciaId: number) => void;
 }
 
 const categoryIcons = [AlertCircle, Lightbulb, Trash2, Droplet, Bug, Footprints, Heart, Trees, Wrench];
@@ -58,7 +60,30 @@ function distanceLabel(distance: number | null) {
   return `${(distance / 1000).toFixed(1)} km`;
 }
 
-export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
+function normalize(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? '';
+}
+
+function findMatchingBairroName(value: string | null | undefined, lista: BairroResponseDTO[]) {
+  const normalized = normalize(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  const exactMatch = lista.find((bairro) => normalize(bairro.nome) === normalized);
+  if (exactMatch) {
+    return exactMatch.nome;
+  }
+
+  const partialMatch = lista.find((bairro) =>
+    normalize(bairro.nome).includes(normalized) || normalized.includes(normalize(bairro.nome)),
+  );
+
+  return partialMatch?.nome ?? null;
+}
+
+export function NewReportFlow({ onClose, onCreated, onViewReport }: NewReportFlowProps) {
   const { usuario } = useUser();
   const [step, setStep] = useState(1);
   const [categorias, setCategorias] = useState<CategoriaResponseDTO[]>([]);
@@ -84,9 +109,10 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
   const [isLoadingBairros, setIsLoadingBairros] = useState(false);
   const [isCheckingSimilar, setIsCheckingSimilar] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [createdReportId, setCreatedReportId] = useState<number | null>(null);
+  const geocodeRequestIdRef = useRef(0);
 
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
@@ -94,6 +120,9 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
   const selectedCategory = activeCategories.find((categoria) => categoria.id === selectedCategoryId);
   const selectedPrefeitura = prefeituras.find((prefeitura) => prefeitura.id === selectedPrefeituraId);
   const selectedBairro = bairros.find((bairro) => bairro.nome === neighborhood);
+  const locationLabel = [street || referencePoint || 'Endereco nao informado', neighborhood, city]
+    .filter(Boolean)
+    .join(', ');
 
   useEffect(() => {
     categoriaService.listar()
@@ -108,7 +137,7 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
         setPrefeituras(response);
 
         const prefeituraDaSessao = response.find((prefeitura) =>
-          prefeitura.cidade.toLowerCase() === (usuario?.cidade ?? '').toLowerCase());
+          normalize(prefeitura.cidade) === normalize(usuario?.cidade));
 
         if (prefeituraDaSessao) {
           setSelectedPrefeituraId(prefeituraDaSessao.id);
@@ -146,9 +175,8 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
             return current;
           }
 
-          const bairroDaSessao = response.find((bairro) =>
-            bairro.nome.toLowerCase() === (usuario?.bairro ?? '').toLowerCase());
-          return bairroDaSessao?.nome ?? '';
+          const bairroDaSessao = findMatchingBairroName(usuario?.bairro, response);
+          return bairroDaSessao ?? '';
         });
       })
       .catch((err) => {
@@ -167,6 +195,73 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
       previews.forEach((preview) => URL.revokeObjectURL(preview));
     };
   }, [files]);
+
+  useEffect(() => {
+    if (street.trim() || referencePoint.trim()) {
+      return;
+    }
+
+    if (selectedBairro?.centroideLatitude !== null && selectedBairro?.centroideLongitude !== null) {
+      setLatitude(selectedBairro.centroideLatitude);
+      setLongitude(selectedBairro.centroideLongitude);
+      setLocationError(null);
+    }
+  }, [referencePoint, selectedBairro, street]);
+
+  useEffect(() => {
+    if (!city.trim()) {
+      return;
+    }
+
+    const enderecoBusca = [street.trim(), referencePoint.trim()].filter(Boolean).join(', ');
+    const shouldGeocode = enderecoBusca.length >= 4;
+
+    if (!shouldGeocode) {
+      return;
+    }
+
+    const requestId = ++geocodeRequestIdRef.current;
+    const timeoutId = window.setTimeout(async () => {
+      setIsResolvingLocation(true);
+      setLocationError(null);
+
+      try {
+        const result = await geocodingService.buscarCoordenadas({
+          endereco: enderecoBusca,
+          bairro: neighborhood,
+          cidade: city,
+          estado: selectedPrefeitura?.estado ?? null,
+        });
+
+        if (requestId !== geocodeRequestIdRef.current) {
+          return;
+        }
+
+        if (!result) {
+          setLocationError('Nao encontramos esse endereco no mapa ainda. Tente complementar o endereco ou usar sua localizacao atual.');
+          return;
+        }
+
+        setLatitude(result.latitude);
+        setLongitude(result.longitude);
+
+        const bairroEncontrado = findMatchingBairroName(result.bairro, bairros);
+        if (bairroEncontrado) {
+          setNeighborhood(bairroEncontrado);
+        }
+      } catch {
+        if (requestId === geocodeRequestIdRef.current) {
+          setLocationError('Nao foi possivel atualizar o mapa a partir do endereco informado.');
+        }
+      } finally {
+        if (requestId === geocodeRequestIdRef.current) {
+          setIsResolvingLocation(false);
+        }
+      }
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [bairros, city, neighborhood, referencePoint, selectedPrefeitura?.estado, street]);
 
   function resetSimilarCheck() {
     setSemelhantes(null);
@@ -196,11 +291,7 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
     }
 
     if (step === 2) {
-      if (prefeituras.length > 0) {
-        return Boolean(selectedPrefeituraId) && neighborhood.trim().length > 0;
-      }
-
-      return city.trim().length > 0 && neighborhood.trim().length > 0;
+      return Boolean(selectedPrefeituraId) && neighborhood.trim().length > 0;
     }
 
     if (step === 3) {
@@ -223,7 +314,12 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
     setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index));
   }
 
-  function useCurrentLocation() {
+  function handleAddressChange(value: string) {
+    setStreet(value);
+    resetSimilarCheck();
+  }
+
+  async function useCurrentLocation() {
     setLocationError(null);
 
     if (!navigator.geolocation) {
@@ -231,12 +327,40 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
       return;
     }
 
+    setIsResolvingLocation(true);
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
+      async (position) => {
+        const nextLatitude = position.coords.latitude;
+        const nextLongitude = position.coords.longitude;
+
+        setLatitude(nextLatitude);
+        setLongitude(nextLongitude);
+
+        try {
+          const result = await geocodingService.buscarEndereco(nextLatitude, nextLongitude);
+          if (result) {
+            if (result.endereco) {
+              setStreet(result.endereco);
+            }
+
+            const bairroEncontrado = findMatchingBairroName(result.bairro, bairros);
+            if (bairroEncontrado) {
+              setNeighborhood(bairroEncontrado);
+            } else if (!neighborhood.trim() && result.bairro && bairros.length === 0) {
+              setNeighborhood(result.bairro);
+            }
+          }
+        } catch {
+          setLocationError('Localizacao capturada, mas nao foi possivel preencher o endereco automaticamente.');
+        } finally {
+          setIsResolvingLocation(false);
+        }
       },
-      () => setLocationError('Nao foi possivel capturar sua localizacao. Voce ainda pode informar o endereco manualmente.'),
+      () => {
+        setLocationError('Nao foi possivel capturar sua localizacao. Voce ainda pode informar o endereco manualmente.');
+        setIsResolvingLocation(false);
+      },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
@@ -270,8 +394,7 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
         await denunciaService.anexar(created.id, compressed);
       }
 
-      setCreatedReportId(created.id);
-      setStep(totalSteps + 1);
+      onCreated(created.id);
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -320,7 +443,7 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
           Carregando categorias...
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {activeCategories.map((category, index) => {
             const Icon = categoryIcons[index % categoryIcons.length];
             return (
@@ -366,156 +489,135 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
           Onde esta o problema?
         </h2>
         <p className="text-muted-foreground">
-          Informe cidade, bairro e endereco. A coordenada ajuda o mapa, mas nao e obrigatoria.
+          A cidade fica fixa na sua conta. Informe bairro e endereco para posicionar melhor o relato no mapa.
         </p>
       </div>
 
-      <div className="aspect-[4/3] bg-muted rounded-2xl flex items-center justify-center relative overflow-hidden border border-border">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-sky-50 to-emerald-50" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-6">
-          <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg">
-            <MapPin className="w-7 h-7 text-primary-foreground" />
-          </div>
-          <div>
-            <p className="font-medium text-foreground">
-              {latitude && longitude ? 'Coordenada capturada' : 'Localizacao manual'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {latitude && longitude
-                ? 'O relato sera exibido no mapa da cidade.'
-                : 'Use sua localizacao ou preencha o endereco.'}
-            </p>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)] gap-6 items-start">
+        <div className="space-y-4 lg:sticky lg:top-24">
+          <ReportLocationMap
+            latitude={latitude}
+            longitude={longitude}
+            label={locationLabel || city || 'Localizacao do relato'}
+            className="h-[320px] lg:h-[520px]"
+          />
+
+          <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground space-y-1">
+            <div className="flex items-center gap-2 text-foreground font-medium">
+              <MapPin className="w-4 h-4 text-primary" />
+              Local usado no mapa
+            </div>
+            <p>{locationLabel || 'Informe o endereco ou use sua localizacao atual para posicionar o relato.'}</p>
+            {isResolvingLocation && (
+              <p className="inline-flex items-center gap-2 text-primary">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Atualizando localizacao...
+              </p>
+            )}
           </div>
         </div>
-      </div>
 
-      <button
-        type="button"
-        onClick={useCurrentLocation}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl font-medium"
-      >
-        <Navigation className="w-5 h-5" />
-        Usar minha localizacao
-      </button>
+        <div className="space-y-4">
+          <Button
+            type="button"
+            onClick={useCurrentLocation}
+            className="w-full flex items-center justify-center gap-2"
+            disabled={isResolvingLocation}
+          >
+            {isResolvingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+            Usar minha localizacao atual
+          </Button>
 
-      {locationError && <p className="text-sm text-destructive">{locationError}</p>}
+          {locationError && <p className="text-sm text-destructive">{locationError}</p>}
 
-      <div className="space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Cidade</label>
-            {prefeituras.length > 0 ? (
-              <select
-                value={selectedPrefeituraId ?? ''}
-                onChange={(event) => {
-                  const prefeituraId = event.target.value ? Number(event.target.value) : null;
-                  const prefeitura = prefeituras.find((item) => item.id === prefeituraId);
-                  setSelectedPrefeituraId(prefeituraId);
-                  setCity(prefeitura?.cidade ?? '');
-                  setNeighborhood('');
-                  resetSimilarCheck();
-                }}
-                disabled={isLoadingPrefeituras}
-                className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              >
-                <option value="">
-                  {isLoadingPrefeituras ? 'Carregando cidades...' : 'Selecione a cidade'}
-                </option>
-                {prefeituras.map((prefeitura) => (
-                  <option key={prefeitura.id} value={prefeitura.id}>
-                    {prefeitura.cidade} - {prefeitura.estado}
-                  </option>
-                ))}
-              </select>
-            ) : (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Cidade</label>
               <input
                 type="text"
                 value={city}
-                onChange={(event) => {
-                  setCity(event.target.value);
-                  resetSimilarCheck();
-                }}
-                placeholder="Ex: Mamanguape"
-                className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                readOnly
+                className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground"
               />
-            )}
-            {selectedPrefeitura && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Prefeitura: {selectedPrefeitura.nome}
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Bairro</label>
-            {prefeituras.length > 0 ? (
-              <select
-                value={neighborhood}
-                onChange={(event) => {
-                  setNeighborhood(event.target.value);
-                  resetSimilarCheck();
-                }}
-                disabled={!selectedPrefeituraId || isLoadingBairros}
-                className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              >
-                <option value="">
-                  {!selectedPrefeituraId
-                    ? 'Selecione a cidade primeiro'
-                    : isLoadingBairros
-                      ? 'Carregando bairros...'
-                      : 'Selecione o bairro'}
-                </option>
-                {bairros.map((bairro) => (
-                  <option key={bairro.id} value={bairro.nome}>
-                    {bairro.nome}
+              {selectedPrefeitura && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Prefeitura responsavel: {selectedPrefeitura.nome}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Bairro</label>
+              {prefeituras.length > 0 ? (
+                <select
+                  value={neighborhood}
+                  onChange={(event) => {
+                    setNeighborhood(event.target.value);
+                    resetSimilarCheck();
+                  }}
+                  disabled={!selectedPrefeituraId || isLoadingBairros}
+                  className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                >
+                  <option value="">
+                    {!selectedPrefeituraId
+                      ? 'Carregando cidade da sua conta...'
+                      : isLoadingBairros
+                        ? 'Carregando bairros...'
+                        : 'Selecione o bairro'}
                   </option>
-                ))}
-              </select>
-            ) : (
+                  {bairros.map((bairro) => (
+                    <option key={bairro.id} value={bairro.nome}>
+                      {bairro.nome}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={neighborhood}
+                  onChange={(event) => {
+                    setNeighborhood(event.target.value);
+                    resetSimilarCheck();
+                  }}
+                  placeholder="Digite o bairro"
+                  className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              )}
+              {selectedPrefeituraId && !isLoadingBairros && bairros.length === 0 && (
+                <p className="text-xs text-amber-700 mt-1">
+                  Nenhum bairro ativo cadastrado para esta cidade.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Endereco</label>
               <input
                 type="text"
-                value={neighborhood}
-                onChange={(event) => {
-                  setNeighborhood(event.target.value);
-                  resetSimilarCheck();
-                }}
-                placeholder="Digite o bairro"
+                value={street}
+                onChange={(event) => handleAddressChange(event.target.value)}
+                placeholder="Ex: Rua Senador Ruy Carneiro, 120"
                 className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
-            )}
-            {selectedPrefeituraId && !isLoadingBairros && bairros.length === 0 && (
-              <p className="text-xs text-amber-700 mt-1">
-                Nenhum bairro ativo cadastrado para esta cidade.
+              <p className="text-xs text-muted-foreground mt-1">
+                Conforme voce digita, tentamos marcar esse local no mapa.
               </p>
-            )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Ponto de referencia</label>
+              <input
+                type="text"
+                value={referencePoint}
+                onChange={(event) => {
+                  setReferencePoint(event.target.value);
+                  resetSimilarCheck();
+                }}
+                placeholder="Ex: em frente a escola, perto da praca..."
+                className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              />
+            </div>
           </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Rua</label>
-          <input
-            type="text"
-            value={street}
-            onChange={(event) => {
-              setStreet(event.target.value);
-              resetSimilarCheck();
-            }}
-            placeholder="Digite o nome da rua"
-            className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Ponto de referencia</label>
-          <input
-            type="text"
-            value={referencePoint}
-            onChange={(event) => {
-              setReferencePoint(event.target.value);
-              resetSimilarCheck();
-            }}
-            placeholder="Ex: em frente a escola, perto da praca..."
-            className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
         </div>
       </div>
     </div>
@@ -532,98 +634,106 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
         </p>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Titulo do relato</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(event) => {
-              setTitle(event.target.value);
-              resetSimilarCheck();
-            }}
-            placeholder="Ex: Buraco grande na Rua das Flores"
-            maxLength={120}
-            className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-          <p className="text-xs text-muted-foreground mt-1">Minimo de 5 caracteres.</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Descricao</label>
-          <textarea
-            value={description}
-            onChange={(event) => {
-              setDescription(event.target.value);
-              resetSimilarCheck();
-            }}
-            placeholder="Descreva o problema em detalhes..."
-            rows={5}
-            maxLength={2000}
-            className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-          />
-          <p className="text-xs text-muted-foreground mt-1">Minimo de 20 caracteres.</p>
-        </div>
-
-        <div className="flex items-center justify-between p-4 bg-muted rounded-xl">
-          <div className="flex-1">
-            <label className="text-sm font-medium text-foreground">Publicar como anonimo</label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Seu nome nao sera exibido publicamente.
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-6 items-start">
+        <div className="space-y-4 lg:sticky lg:top-24">
+          <label className="border-2 border-dashed border-border rounded-2xl p-8 text-center block cursor-pointer hover:border-primary/40 transition-colors bg-card">
+            <Camera className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm font-medium text-foreground mb-1">Adicionar fotos</p>
+            <p className="text-xs text-muted-foreground">
+              Imagens grandes serao compactadas antes do envio.
             </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsAnonymous(!isAnonymous)}
-            className={`relative w-12 h-6 rounded-full transition-colors ${
-              isAnonymous ? 'bg-primary' : 'bg-border'
-            }`}
-          >
-            <div
-              className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                isAnonymous ? 'translate-x-7' : 'translate-x-1'
-              }`}
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFilesChange}
+              className="hidden"
             />
-          </button>
+          </label>
+
+          {files.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3">
+              {files.map((file, index) => (
+                <div key={`${file.name}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-muted">
+                  {filePreviews[index] ? (
+                    <img src={filePreviews[index]} alt={file.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                      <ImageIcon className="w-6 h-6" />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="absolute top-1 right-1 w-7 h-7 rounded-full bg-black/60 text-white text-xs"
+                  >
+                    x
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-muted/30 px-5 py-8 text-center text-sm text-muted-foreground">
+              Nenhuma foto adicionada ainda.
+            </div>
+          )}
         </div>
 
-        <label className="border-2 border-dashed border-border rounded-2xl p-8 text-center block cursor-pointer hover:border-primary/40 transition-colors">
-          <Camera className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm font-medium text-foreground mb-1">Adicionar fotos</p>
-          <p className="text-xs text-muted-foreground">
-            Imagens grandes serao compactadas antes do envio.
-          </p>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleFilesChange}
-            className="hidden"
-          />
-        </label>
-
-        {files.length > 0 && (
-          <div className="grid grid-cols-3 gap-3">
-            {files.map((file, index) => (
-              <div key={`${file.name}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-muted">
-                {filePreviews[index] ? (
-                  <img src={filePreviews[index]} alt={file.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <ImageIcon className="w-6 h-6" />
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => removeFile(index)}
-                  className="absolute top-1 right-1 w-7 h-7 rounded-full bg-black/60 text-white text-xs"
-                >
-                  x
-                </button>
-              </div>
-            ))}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Titulo do relato</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                resetSimilarCheck();
+              }}
+              placeholder="Ex: Buraco grande na Rua das Flores"
+              maxLength={120}
+              className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Minimo de 5 caracteres.</p>
           </div>
-        )}
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Descricao</label>
+            <textarea
+              value={description}
+              onChange={(event) => {
+                setDescription(event.target.value);
+                resetSimilarCheck();
+              }}
+              placeholder="Descreva o problema em detalhes..."
+              rows={8}
+              maxLength={2000}
+              className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Minimo de 20 caracteres.</p>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-muted rounded-xl">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-foreground">Publicar como anonimo</label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Seu nome nao sera exibido publicamente.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAnonymous(!isAnonymous)}
+              className={`relative w-12 h-6 rounded-full transition-colors ${
+                isAnonymous ? 'bg-primary' : 'bg-border'
+              }`}
+            >
+              <div
+                className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                  isAnonymous ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -637,120 +747,118 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
         </p>
       </div>
 
-      <div className="space-y-4">
-        <div className="p-4 bg-card rounded-xl border border-border">
-          <div className="text-xs text-muted-foreground mb-1">Categoria</div>
-          <div className="font-medium text-foreground">{selectedCategory?.nome}</div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-6 items-start">
+        <div className="space-y-4 lg:sticky lg:top-24">
+          <ReportLocationMap
+            latitude={latitude}
+            longitude={longitude}
+            label={locationLabel || city || 'Localizacao do relato'}
+            className="h-[260px] lg:h-[320px]"
+          />
 
-        <div className="p-4 bg-card rounded-xl border border-border">
-          <div className="text-xs text-muted-foreground mb-1">Localizacao</div>
-          <div className="font-medium text-foreground">
-            {street || 'Rua nao informada'}, {neighborhood}, {city}
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="text-xs text-muted-foreground mb-2">Fotos selecionadas</div>
+            {files.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+                Nenhuma foto adicionada.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {files.map((file, index) => (
+                  <div key={`${file.name}-${index}`} className="aspect-square rounded-xl overflow-hidden border border-border bg-muted">
+                    {filePreviews[index] ? (
+                      <img src={filePreviews[index]} alt={file.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        <ImageIcon className="w-6 h-6" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          {referencePoint && <div className="text-sm text-muted-foreground mt-1">{referencePoint}</div>}
         </div>
 
-        <div className="p-4 bg-card rounded-xl border border-border">
-          <div className="text-xs text-muted-foreground mb-1">Titulo</div>
-          <div className="font-medium text-foreground">{title}</div>
-        </div>
-
-        <div className="p-4 bg-card rounded-xl border border-border">
-          <div className="text-xs text-muted-foreground mb-1">Descricao</div>
-          <div className="text-sm text-foreground">{description}</div>
-        </div>
-
-        <div className="p-4 bg-card rounded-xl border border-border">
-          <div className="text-xs text-muted-foreground mb-1">Fotos</div>
-          <div className="font-medium text-foreground">
-            {files.length === 0 ? 'Nenhuma foto adicionada' : `${files.length} foto${files.length === 1 ? '' : 's'} selecionada${files.length === 1 ? '' : 's'}`}
+        <div className="space-y-4">
+          <div className="p-4 bg-card rounded-xl border border-border">
+            <div className="text-xs text-muted-foreground mb-1">Categoria</div>
+            <div className="font-medium text-foreground">{selectedCategory?.nome}</div>
           </div>
-        </div>
 
-        {isAnonymous && (
-          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
-            <div className="text-xs text-amber-700">Este relato sera publicado anonimamente.</div>
-          </div>
-        )}
-
-        {semelhantesChecked && semelhantes && semelhantes.length > 0 && (
-          <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200 space-y-3">
-            <div>
-              <h3 className="font-display font-semibold text-blue-900">Relatos parecidos encontrados</h3>
-              <p className="text-sm text-blue-800">
-                Talvez seja melhor apoiar um relato existente em vez de criar outro.
-              </p>
+          <div className="p-4 bg-card rounded-xl border border-border">
+            <div className="text-xs text-muted-foreground mb-1">Localizacao</div>
+            <div className="font-medium text-foreground">
+              {locationLabel || 'Endereco nao informado'}
             </div>
-            <div className="space-y-2">
-              {semelhantes.slice(0, 3).map((item) => (
-                <div key={item.denunciaId} className="bg-card border border-blue-100 rounded-xl p-3 space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{item.titulo}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.rua || 'Rua nao informada'}, {item.bairro} - {distanceLabel(item.distanciaMetros)}
-                      </p>
+            {referencePoint && <div className="text-sm text-muted-foreground mt-1">{referencePoint}</div>}
+          </div>
+
+          <div className="p-4 bg-card rounded-xl border border-border">
+            <div className="text-xs text-muted-foreground mb-1">Titulo</div>
+            <div className="font-medium text-foreground">{title}</div>
+          </div>
+
+          <div className="p-4 bg-card rounded-xl border border-border">
+            <div className="text-xs text-muted-foreground mb-1">Descricao</div>
+            <div className="text-sm text-foreground whitespace-pre-line">{description}</div>
+          </div>
+
+          {isAnonymous && (
+            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+              <div className="text-xs text-amber-700">Este relato sera publicado anonimamente.</div>
+            </div>
+          )}
+
+          {semelhantesChecked && semelhantes && semelhantes.length > 0 && (
+            <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200 space-y-3">
+              <div>
+                <h3 className="font-display font-semibold text-blue-900">Relatos parecidos encontrados</h3>
+                <p className="text-sm text-blue-800">
+                  Talvez seja melhor apoiar um relato existente em vez de criar outro.
+                </p>
+              </div>
+              <div className="space-y-2">
+                {semelhantes.slice(0, 3).map((item) => (
+                  <div key={item.denunciaId} className="bg-card border border-blue-100 rounded-xl p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-foreground">{item.titulo}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.rua || 'Endereco nao informado'}, {item.bairro} - {distanceLabel(item.distanciaMetros)}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs">
+                        {statusLabels[item.status]}
+                      </span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs">
-                      {statusLabels[item.status]}
-                    </span>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{item.percentualSemelhancaTexto}% parecido</span>
+                      <span>{item.quantidadeConfirmacoes} apoios</span>
+                      <span>{item.quantidadeUrgencias} urgencias</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onViewReport(item.denunciaId)}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      Ver relato existente
+                    </button>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{item.percentualSemelhancaTexto}% parecido</span>
-                    <span>{item.quantidadeConfirmacoes} apoios</span>
-                    <span>{item.quantidadeUrgencias} urgencias</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onComplete(item.denunciaId)}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    Ver relato existente
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {semelhantesChecked && semelhantes && semelhantes.length === 0 && (
-          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-sm text-emerald-800">
-            Nenhum relato semelhante foi encontrado. Pode enviar.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderSuccess = () => (
-    <div className="flex-1 flex items-center justify-center p-8">
-      <div className="text-center max-w-md">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="w-10 h-10 text-green-600" />
-        </div>
-        <h2 className="text-2xl font-display font-bold text-foreground mb-3">Relato enviado com sucesso!</h2>
-        <p className="text-muted-foreground mb-8">
-          Sua informacao foi registrada e sera analisada. Voce pode acompanhar cada etapa pelo detalhe do relato.
-        </p>
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={() => createdReportId && onComplete(createdReportId)}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium"
-          >
-            Acompanhar relato
-          </button>
-          <button onClick={onClose} className="px-6 py-3 bg-muted text-foreground rounded-xl font-medium">
-            Voltar ao feed
-          </button>
+          {semelhantesChecked && semelhantes && semelhantes.length === 0 && (
+            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-sm text-emerald-800">
+              Nenhum relato semelhante foi encontrado. Pode enviar.
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
-
-  if (step > totalSteps) {
-    return <div className="fixed inset-0 bg-background z-50 flex flex-col">{renderSuccess()}</div>;
-  }
 
   const buttonLabel = step === totalSteps
     ? semelhantesChecked && semelhantes && semelhantes.length > 0
@@ -776,7 +884,7 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-2xl mx-auto space-y-4">
+        <div className="max-w-6xl mx-auto space-y-4">
           {error && (
             <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3 text-sm">
               {error}
@@ -790,14 +898,16 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
       </div>
 
       <div className="sticky bottom-0 bg-card border-t border-border p-4">
-        <button
-          onClick={handleNext}
-          disabled={!canContinue()}
-          className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-        >
-          {(isCheckingSimilar || isSubmitting) && <Loader2 className="w-4 h-4 animate-spin" />}
-          {buttonLabel}
-        </button>
+        <div className="max-w-6xl mx-auto">
+          <button
+            onClick={handleNext}
+            disabled={!canContinue()}
+            className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+          >
+            {(isCheckingSimilar || isSubmitting) && <Loader2 className="w-4 h-4 animate-spin" />}
+            {buttonLabel}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -48,6 +48,7 @@ export interface AuditoriaResponseDTO {
   alvoTipo: TipoAlvoAuditoria;
   alvoId: number | null;
   atorId: number | null;
+  atorNome: string | null;
   perfilAtor: string | null;
   descricao: string;
   detalhes: string | null;

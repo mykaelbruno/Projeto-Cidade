@@ -23,6 +23,7 @@ const DashboardPage = lazy(() => import('./pages/admin/DashboardPage').then((mod
 const RelatosPage = lazy(() => import('./pages/admin/RelatosPage').then((module) => ({ default: module.RelatosPage })));
 const AdministracaoPage = lazy(() => import('./pages/admin/AdministracaoPage').then((module) => ({ default: module.AdministracaoPage })));
 const BairrosPage = lazy(() => import('./pages/admin/BairrosPage').then((module) => ({ default: module.BairrosPage })));
+const AuditoriaPrefeituraPage = lazy(() => import('./pages/admin/AuditoriaPrefeituraPage').then((module) => ({ default: module.AuditoriaPrefeituraPage })));
 const AdminProfilePage = lazy(() => import('./pages/admin/AdminProfilePage').then((module) => ({ default: module.AdminProfilePage })));
 const DashboardSecretariaPage = lazy(() => import('./pages/secretaria/DashboardSecretariaPage').then((module) => ({ default: module.DashboardSecretariaPage })));
 const RelatosSecretariaPage = lazy(() => import('./pages/secretaria/RelatosSecretariaPage').then((module) => ({ default: module.RelatosSecretariaPage })));
@@ -121,6 +122,11 @@ export default function App() {
           <Route path="/prefeitura/bairros" element={
             <RouteGuard allowedRoles={['prefeitura']}>
               <BairrosPage />
+            </RouteGuard>
+          } />
+          <Route path="/prefeitura/auditoria" element={
+            <RouteGuard allowedRoles={['prefeitura']}>
+              <AuditoriaPrefeituraPage />
             </RouteGuard>
           } />
           <Route path="/prefeitura/prefeituraistracao" element={<Navigate to="/prefeitura/administracao" replace />} />

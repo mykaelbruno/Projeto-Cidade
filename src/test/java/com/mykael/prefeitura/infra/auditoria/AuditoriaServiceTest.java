@@ -6,6 +6,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.mykael.prefeitura.core.organizacao.OrganizacaoRepository;
+import com.mykael.prefeitura.core.usuario.UsuarioRepository;
+import com.mykael.prefeitura.core.vinculo.VinculoUsuarioOrganizacaoRepository;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -19,7 +22,15 @@ import org.springframework.security.oauth2.jwt.Jwt;
 class AuditoriaServiceTest {
 
 	private final AuditoriaRepository auditoriaRepository = mock(AuditoriaRepository.class);
-	private final AuditoriaService auditoriaService = new AuditoriaService(auditoriaRepository);
+	private final UsuarioRepository usuarioRepository = mock(UsuarioRepository.class);
+	private final OrganizacaoRepository organizacaoRepository = mock(OrganizacaoRepository.class);
+	private final VinculoUsuarioOrganizacaoRepository vinculoRepository = mock(VinculoUsuarioOrganizacaoRepository.class);
+	private final AuditoriaService auditoriaService = new AuditoriaService(
+			auditoriaRepository,
+			usuarioRepository,
+			organizacaoRepository,
+			vinculoRepository
+	);
 
 	@AfterEach
 	void limparContextos() {

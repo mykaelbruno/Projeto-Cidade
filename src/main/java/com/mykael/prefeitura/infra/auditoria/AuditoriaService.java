@@ -1,6 +1,12 @@
 package com.mykael.prefeitura.infra.auditoria;
 
+import com.mykael.prefeitura.core.organizacao.Organizacao;
+import com.mykael.prefeitura.core.organizacao.OrganizacaoRepository;
+import com.mykael.prefeitura.core.usuario.UsuarioRepository;
+import com.mykael.prefeitura.core.vinculo.VinculoUsuarioOrganizacaoRepository;
 import com.mykael.prefeitura.infra.auditoria.dto.AuditoriaResponseDTO;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,9 +24,20 @@ import org.springframework.util.StringUtils;
 public class AuditoriaService {
 
 	private final AuditoriaRepository auditoriaRepository;
+	private final UsuarioRepository usuarioRepository;
+	private final OrganizacaoRepository organizacaoRepository;
+	private final VinculoUsuarioOrganizacaoRepository vinculoRepository;
 
-	public AuditoriaService(AuditoriaRepository auditoriaRepository) {
+	public AuditoriaService(
+			AuditoriaRepository auditoriaRepository,
+			UsuarioRepository usuarioRepository,
+			OrganizacaoRepository organizacaoRepository,
+			VinculoUsuarioOrganizacaoRepository vinculoRepository
+	) {
 		this.auditoriaRepository = auditoriaRepository;
+		this.usuarioRepository = usuarioRepository;
+		this.organizacaoRepository = organizacaoRepository;
+		this.vinculoRepository = vinculoRepository;
 	}
 
 	@Transactional(propagation = Propagation.MANDATORY)
@@ -61,7 +78,41 @@ public class AuditoriaService {
 			Pageable pageable
 	) {
 		return auditoriaRepository.findAll(filtro(acao, alvoTipo, alvoId, atorId), pageable)
-				.map(AuditoriaResponseDTO::from);
+				.map(auditoria -> AuditoriaResponseDTO.from(auditoria, nomeDoAtor(auditoria.getAtorId())));
+	}
+
+	@Transactional(readOnly = true)
+	public Page<AuditoriaResponseDTO> listarDaPrefeitura(
+			Long prefeituraId,
+			TipoAcaoAuditoria acao,
+			TipoAlvoAuditoria alvoTipo,
+			Long alvoId,
+			Long atorId,
+			Pageable pageable
+	) {
+		Organizacao prefeitura = organizacaoRepository.findById(prefeituraId)
+				.orElseThrow(() -> new IllegalArgumentException("Prefeitura nao encontrada."));
+		List<Long> organizacoesIds = organizacaoRepository.findByOrganizacaoPai(prefeitura)
+				.stream()
+				.map(Organizacao::getId)
+				.collect(Collectors.toList());
+		organizacoesIds.add(prefeituraId);
+
+		Set<Long> atoresDaPrefeitura = organizacoesIds.stream()
+				.flatMap(organizacaoId -> vinculoRepository.findByOrganizacaoIdAndAtivoTrue(organizacaoId).stream())
+				.map(vinculo -> vinculo.getUsuario().getId())
+				.collect(Collectors.toSet());
+
+		if (atoresDaPrefeitura.isEmpty()) {
+			return Page.empty(pageable);
+		}
+
+		if (atorId != null && !atoresDaPrefeitura.contains(atorId)) {
+			return Page.empty(pageable);
+		}
+
+		return auditoriaRepository.findAll(filtro(acao, alvoTipo, alvoId, atorId, atoresDaPrefeitura), pageable)
+				.map(auditoria -> AuditoriaResponseDTO.from(auditoria, nomeDoAtor(auditoria.getAtorId())));
 	}
 
 	private Specification<Auditoria> filtro(
@@ -69,6 +120,16 @@ public class AuditoriaService {
 			TipoAlvoAuditoria alvoTipo,
 			Long alvoId,
 			Long atorId
+	) {
+		return filtro(acao, alvoTipo, alvoId, atorId, null);
+	}
+
+	private Specification<Auditoria> filtro(
+			TipoAcaoAuditoria acao,
+			TipoAlvoAuditoria alvoTipo,
+			Long alvoId,
+			Long atorId,
+			Set<Long> atoresPermitidos
 	) {
 		Specification<Auditoria> specification = (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
 
@@ -88,8 +149,20 @@ public class AuditoriaService {
 			specification = specification.and((root, query, criteriaBuilder) ->
 					criteriaBuilder.equal(root.get("atorId"), atorId));
 		}
+		if (atoresPermitidos != null && !atoresPermitidos.isEmpty()) {
+			specification = specification.and((root, query, criteriaBuilder) -> root.get("atorId").in(atoresPermitidos));
+		}
 
 		return specification;
+	}
+
+	private String nomeDoAtor(Long atorId) {
+		if (atorId == null) {
+			return null;
+		}
+		return usuarioRepository.findById(atorId)
+				.map(usuario -> usuario.getNome())
+				.orElse(null);
 	}
 
 	private Long extrairAtorId(Authentication authentication) {

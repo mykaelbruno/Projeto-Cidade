@@ -11,6 +11,7 @@ public record AuditoriaResponseDTO(
 		TipoAlvoAuditoria alvoTipo,
 		Long alvoId,
 		Long atorId,
+		String atorNome,
 		String perfilAtor,
 		String descricao,
 		String detalhes,
@@ -20,13 +21,14 @@ public record AuditoriaResponseDTO(
 		Instant criadoEm
 ) {
 
-	public static AuditoriaResponseDTO from(Auditoria auditoria) {
+	public static AuditoriaResponseDTO from(Auditoria auditoria, String atorNome) {
 		return new AuditoriaResponseDTO(
 				auditoria.getId(),
 				auditoria.getAcao(),
 				auditoria.getAlvoTipo(),
 				auditoria.getAlvoId(),
 				auditoria.getAtorId(),
+				atorNome,
 				auditoria.getPerfilAtor(),
 				auditoria.getDescricao(),
 				auditoria.getDetalhes(),

@@ -2,6 +2,7 @@ HELP.md
 target/
 uploads/
 .env
+2.env
 front/node_modules/
 front/dist/
 front/node_modules/

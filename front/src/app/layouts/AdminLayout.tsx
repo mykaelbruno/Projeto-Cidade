@@ -4,17 +4,15 @@ import {
   LayoutDashboard,
   FileText,
   Settings,
-  User,
   ChevronLeft,
   ChevronRight,
   MapPin,
+  FileSearch,
   LogOut,
   UserCog,
   UserCircle,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
-import { NotificationsDrawer } from '../components/NotificationsDrawer';
-import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { NotificationsList } from '../components/NotificationsList';
 import { useUser } from '../contexts/UserContext';
 
@@ -23,14 +21,14 @@ const menuItems = [
   { id: 'relatos', label: 'Relatos', icon: FileText, path: '/prefeitura/relatos' },
   { id: 'administracao', label: 'Administracao', icon: UserCog, path: '/prefeitura/administracao' },
   { id: 'bairros', label: 'Bairros', icon: MapPin, path: '/prefeitura/bairros' },
+  { id: 'auditoria', label: 'Auditoria', icon: FileSearch, path: '/prefeitura/auditoria' },
 ];
 
 export function AdminLayout() {
   const navigate = useNavigate();
-  const { logout, setUserType, hasUserType } = useUser();
+  const { logout } = useUser();
   const location = useLocation();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const currentPath = location.pathname;
@@ -107,21 +105,6 @@ export function AdminLayout() {
           <div className="flex items-center gap-3">
             <NotificationsList userRole="prefeitura" />
 
-            <div className="w-px h-6 bg-border" />
-
-            <button
-              onClick={() => {
-                if (hasUserType('morador')) {
-                  setUserType('morador');
-                }
-                navigate('/feed');
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
-            >
-              <User className="w-4 h-4 text-foreground" />
-              <span className="text-sm font-medium text-foreground">Ver como morador</span>
-            </button>
-
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -179,9 +162,6 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
-
-      {/* Profile Switcher */}
-      <ProfileSwitcher />
     </div>
   );
 }

@@ -111,17 +111,12 @@ export function AdministracaoPage() {
         .filter((organizacao) => organizacao.tipo === 'SECRETARIA' && organizacao.organizacaoPaiId === prefeituraId)
         .sort((a, b) => a.nome.localeCompare(b.nome));
 
-      const orgsParaVinculos = [prefeituraAtual, ...secretariasDaPrefeitura].filter(Boolean) as OrganizacaoResponseDTO[];
-      const vinculosCarregados = await Promise.all(
-        orgsParaVinculos.map((organizacao) =>
-          vinculoService.listarPorOrganizacao(organizacao.id).catch(() => []),
-        ),
-      );
+      const vinculosCarregados = await vinculoService.listar();
 
       setPrefeitura(prefeituraAtual);
       setSecretarias(secretariasDaPrefeitura);
       setCategorias(listaCategorias.filter((categoria) => categoria.ativa));
-      setVinculos(vinculosCarregados.flat());
+      setVinculos(vinculosCarregados);
 
       if (!organizacaoUsuarioId && secretariasDaPrefeitura[0]) {
         setOrganizacaoUsuarioId(String(secretariasDaPrefeitura[0].id));
@@ -377,13 +372,14 @@ export function AdministracaoPage() {
                 value={nomeSecretaria}
                 onChange={(event) => setNomeSecretaria(event.target.value)}
                 placeholder="Ex.: Secretaria de Infraestrutura"
+                className="border-border bg-background/80 shadow-sm"
               />
             </div>
             <div>
               <Label className="mb-2 block">Categorias atendidas</Label>
               <div className="grid gap-2 sm:grid-cols-2">
                 {categorias.map((categoria) => (
-                  <label key={categoria.id} className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm">
+                  <label key={categoria.id} className="flex items-center gap-2 rounded-lg border border-border bg-background/80 p-3 text-sm shadow-sm">
                     <Checkbox
                       checked={categoriasSecretaria.has(categoria.id)}
                       onCheckedChange={() => alternarCategoria(categoria.id)}
@@ -415,7 +411,7 @@ export function AdministracaoPage() {
               <div>
                 <Label className="mb-2 block">Secretaria</Label>
                 <Select value={organizacaoUsuarioId} onValueChange={setOrganizacaoUsuarioId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="border-border bg-background/80 shadow-sm">
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -430,7 +426,7 @@ export function AdministracaoPage() {
               <div>
                 <Label className="mb-2 block">Papel</Label>
                 <Select value={papelUsuario} onValueChange={(value) => setPapelUsuario(value as PapelUsuario)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="border-border bg-background/80 shadow-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -442,16 +438,17 @@ export function AdministracaoPage() {
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Input value={nomeUsuario} onChange={(event) => setNomeUsuario(event.target.value)} placeholder="Nome completo" />
-              <Input value={usernameUsuario} onChange={(event) => setUsernameUsuario(event.target.value)} placeholder="Username" />
-              <Input value={emailUsuario} onChange={(event) => setEmailUsuario(event.target.value)} type="email" placeholder="E-mail institucional" />
-              <Input value={telefoneUsuario} onChange={(event) => setTelefoneUsuario(event.target.value)} placeholder="Telefone opcional" />
+              <Input value={nomeUsuario} onChange={(event) => setNomeUsuario(event.target.value)} placeholder="Nome completo" className="border-border bg-background/80 shadow-sm" />
+              <Input value={usernameUsuario} onChange={(event) => setUsernameUsuario(event.target.value)} placeholder="Username" className="border-border bg-background/80 shadow-sm" />
+              <Input value={emailUsuario} onChange={(event) => setEmailUsuario(event.target.value)} type="email" placeholder="E-mail institucional" className="border-border bg-background/80 shadow-sm" />
+              <Input value={telefoneUsuario} onChange={(event) => setTelefoneUsuario(event.target.value)} placeholder="Telefone opcional" className="border-border bg-background/80 shadow-sm" />
             </div>
             <Input
               value={senhaUsuario}
               onChange={(event) => setSenhaUsuario(event.target.value)}
               type="password"
               placeholder="Senha temporaria com no minimo 8 caracteres"
+              className="border-border bg-background/80 shadow-sm"
             />
             <Button
               className="w-full gap-2"
@@ -487,7 +484,7 @@ export function AdministracaoPage() {
                   <h3 className="font-semibold text-foreground">{secretaria.nome}</h3>
                   <p className="text-sm text-muted-foreground">{secretaria.cidade}/{secretaria.estado}</p>
                 </div>
-                <Badge variant={secretaria.ativa ? 'default' : 'secondary'}>
+                <Badge className={secretaria.ativa ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}>
                   {secretaria.ativa ? 'Ativa' : 'Inativa'}
                 </Badge>
               </div>
@@ -562,7 +559,7 @@ export function AdministracaoPage() {
                         <p className="text-sm text-muted-foreground">{papelLabel(vinculo.papel)}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant={vinculo.ativo ? 'default' : 'secondary'}>
+                        <Badge className={vinculo.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}>
                           {vinculo.ativo ? 'Ativo' : 'Inativo'}
                         </Badge>
                         {organizacao.tipo === 'SECRETARIA' && (
@@ -610,7 +607,7 @@ export function AdministracaoPage() {
           </DialogHeader>
           <div>
             <Label className="mb-2 block">Nome</Label>
-            <Input value={nomeEditando} onChange={(event) => setNomeEditando(event.target.value)} />
+            <Input value={nomeEditando} onChange={(event) => setNomeEditando(event.target.value)} className="border-border bg-background/80 shadow-sm" />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSecretariaEditando(null)}>Cancelar</Button>
@@ -629,7 +626,7 @@ export function AdministracaoPage() {
           </DialogHeader>
           <div className="grid gap-2 sm:grid-cols-2">
             {categorias.map((categoria) => (
-              <label key={categoria.id} className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm">
+              <label key={categoria.id} className="flex items-center gap-2 rounded-lg border border-border bg-background/80 p-3 text-sm shadow-sm">
                 <Checkbox
                   checked={categoriasEditando.has(categoria.id)}
                   onCheckedChange={() => alternarCategoriaEditando(categoria.id)}
@@ -656,7 +653,7 @@ export function AdministracaoPage() {
           <div>
             <Label className="mb-2 block">Secretaria de destino</Label>
             <Select value={destinoMovimento} onValueChange={setDestinoMovimento}>
-              <SelectTrigger>
+              <SelectTrigger className="border-border bg-background/80 shadow-sm">
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>

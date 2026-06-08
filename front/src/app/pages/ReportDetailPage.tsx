@@ -26,6 +26,7 @@ import { Logo } from '../components/Logo';
 import { NotificationBellButton } from '../components/NotificationBellButton';
 import { NotificationsDrawer } from '../components/NotificationsDrawer';
 import { ReportLocationMap } from '../components/ReportLocationMap';
+import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -40,17 +41,23 @@ import {
 import { getApiErrorMessage, getApiUrl } from '../services/apiClient';
 import { denunciaService } from '../services/denunciaService';
 import { interacaoDenunciaService } from '../services/interacaoDenunciaService';
+import { operacionalService } from '../services/operacionalService';
+import { organizacaoService } from '../services/organizacaoService';
 import { mapDenunciaToReport } from '../mappers/denunciaMapper';
 import { useUser } from '../contexts/UserContext';
 import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';
+import { getVinculoOperacionalAtivo } from '../utils/operacionalContext';
+import { statusDenunciaColors, statusDenunciaLabels } from '../components/operacional/operacionalLabels';
 import type {
   AnexoDenunciaResponseDTO,
   ComentarioResponseDTO,
   DenunciaResponseDTO,
   InteracaoDenunciaResponseDTO,
   MotivoSinalizacaoDenuncia,
+  StatusDenuncia,
   TimelineDenunciaResponseDTO,
 } from '../types/denuncia';
+import type { OrganizacaoResponseDTO } from '../types/organizacao';
 
 const motivosSinalizacao: Array<{ value: MotivoSinalizacaoDenuncia; label: string }> = [
   { value: 'IMAGEM_INADEQUADA', label: 'Imagem inadequada' },
@@ -113,12 +120,71 @@ function formatOrganizationName(name: string | null | undefined, cidade: string)
   return name.toLowerCase().includes(cidade.toLowerCase()) ? name : `${name} - ${cidade}`;
 }
 
+function parseStatusTimelineDescription(descricao: string) {
+  const match = descricao.match(/^Status alterado de ([A-Z_]+) para ([A-Z_]+)\.(?: Motivo: (.+))?$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, statusAnterior, statusNovo, motivo] = match;
+  return {
+    statusAnterior: statusAnterior as StatusDenuncia,
+    statusNovo: statusNovo as StatusDenuncia,
+    motivo: motivo?.trim() ?? '',
+  };
+}
+
+function renderTimelineDescription(evento: TimelineDenunciaResponseDTO) {
+  if (evento.tipo !== 'STATUS_ALTERADO') {
+    return <p className={`text-sm ${isTimelineDangerEvent(evento) ? 'text-red-700' : 'text-foreground'}`}>{evento.descricao}</p>;
+  }
+
+  const parsed = parseStatusTimelineDescription(evento.descricao);
+  if (!parsed) {
+    return <p className="text-sm text-foreground">{evento.descricao}</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-foreground">
+        <span>Status alterado de</span>
+        <Badge className={statusDenunciaColors[parsed.statusAnterior]}>
+          {statusDenunciaLabels[parsed.statusAnterior]}
+        </Badge>
+        <span>para</span>
+        <Badge className={statusDenunciaColors[parsed.statusNovo]}>
+          {statusDenunciaLabels[parsed.statusNovo]}
+        </Badge>
+      </div>
+      {parsed.motivo && (
+        <p className="text-sm text-muted-foreground">
+          Motivo: {parsed.motivo}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ReportDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { usuario, isMorador, logout } = useUser();
+  const { usuario, isMorador, isAdmin, isSecretaria, logout, userType, vinculosOperacionais } = useUser();
   const { unreadCount } = useUnreadNotificationsCount();
   const denunciaId = Number(id);
+  const vinculoOperacional = useMemo(
+    () => getVinculoOperacionalAtivo(userType, vinculosOperacionais),
+    [userType, vinculosOperacionais],
+  );
+  const isOperacional = isAdmin || isSecretaria;
+  const profilePath = userType === 'prefeitura'
+    ? '/prefeitura/perfil'
+    : userType === 'secretaria'
+      ? '/secretaria/perfil'
+      : userType === 'admin_app'
+        ? '/admin-app/visao-geral'
+        : userType === 'moderador'
+          ? '/moderador/painel'
+          : '/perfil';
   const [denuncia, setDenuncia] = useState<DenunciaResponseDTO | null>(null);
   const [anexos, setAnexos] = useState<AnexoDenunciaResponseDTO[]>([]);
   const [comentarios, setComentarios] = useState<ComentarioResponseDTO[]>([]);
@@ -140,6 +206,15 @@ export function ReportDetailPage() {
   const [motivo, setMotivo] = useState<MotivoSinalizacaoDenuncia>('SPAM');
   const [comentarioSinalizacao, setComentarioSinalizacao] = useState('');
   const [imagemAtivaIndex, setImagemAtivaIndex] = useState(0);
+  const [statusAberto, setStatusAberto] = useState(false);
+  const [novoStatus, setNovoStatus] = useState<StatusDenuncia>('ABERTO');
+  const [motivoStatus, setMotivoStatus] = useState('');
+  const [respostaAberta, setRespostaAberta] = useState(false);
+  const [respostaOficial, setRespostaOficial] = useState('');
+  const [reatribuicaoAberta, setReatribuicaoAberta] = useState(false);
+  const [destinoReatribuicao, setDestinoReatribuicao] = useState('');
+  const [motivoReatribuicao, setMotivoReatribuicao] = useState('');
+  const [secretariasPrefeitura, setSecretariasPrefeitura] = useState<OrganizacaoResponseDTO[]>([]);
 
   const carregarDetalhe = useCallback(async () => {
     if (!Number.isFinite(denunciaId)) {
@@ -213,6 +288,54 @@ export function ReportDetailPage() {
       !denuncia.conclusaoConfirmadaEm,
   );
   const responsavelNome = formatOrganizationName(denuncia?.organizacaoResponsavelNome, denuncia?.cidade ?? '');
+  const organizacaoExecutoraId = vinculoOperacional?.organizacaoId ?? denuncia?.organizacaoResponsavelId ?? null;
+  const statusOperacionaisDisponiveis = useMemo(
+    () => (['ABERTO', 'EM_ANALISE', 'ENCAMINHADO', 'EM_ANDAMENTO', 'PROGRAMADO', 'CONCLUIDO', 'REABERTO'] satisfies StatusDenuncia[]),
+    [],
+  );
+
+  useEffect(() => {
+    if (!denuncia) {
+      return;
+    }
+
+    setNovoStatus(denuncia.status);
+  }, [denuncia]);
+
+  useEffect(() => {
+    if (!isAdmin || !vinculoOperacional) {
+      setSecretariasPrefeitura([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    organizacaoService.listar()
+      .then((organizacoes) => {
+        if (cancelled) {
+          return;
+        }
+
+        setSecretariasPrefeitura(
+          organizacoes
+            .filter((organizacao) =>
+              organizacao.tipo === 'SECRETARIA' &&
+              organizacao.organizacaoPaiId === vinculoOperacional.organizacaoId &&
+              organizacao.ativa,
+            )
+            .sort((a, b) => a.nome.localeCompare(b.nome)),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSecretariasPrefeitura([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, vinculoOperacional]);
 
   function updateInteracao(response: InteracaoDenunciaResponseDTO) {
     setInteracao(response);
@@ -268,6 +391,84 @@ export function ReportDetailPage() {
         ...current,
         quantidadeComentarios: current.quantidadeComentarios + 1,
       } : current);
+    } catch (err) {
+      setActionError(getApiErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function atualizarStatusOperacional() {
+    if (!denuncia || !organizacaoExecutoraId) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
+      const response = await operacionalService.atualizarStatus(denuncia.id, {
+        status: novoStatus,
+        organizacaoId: organizacaoExecutoraId,
+        motivo: motivoStatus.trim() || null,
+      });
+      setDenuncia(response);
+      setStatusAberto(false);
+      setMotivoStatus('');
+      setSuccessTone('success');
+      setSuccessMessage('Status atualizado com sucesso.');
+      await carregarDetalhe();
+    } catch (err) {
+      setActionError(getApiErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function publicarRespostaOficial() {
+    if (!denuncia || !organizacaoExecutoraId || respostaOficial.trim().length < 5) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
+      await operacionalService.responderOficialmente(denuncia.id, {
+        organizacaoId: organizacaoExecutoraId,
+        conteudo: respostaOficial.trim(),
+      });
+      setRespostaOficial('');
+      setRespostaAberta(false);
+      setSuccessTone('success');
+      setSuccessMessage('Resposta oficial publicada.');
+      await carregarDetalhe();
+    } catch (err) {
+      setActionError(getApiErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function reatribuirResponsavel() {
+    if (!denuncia || !destinoReatribuicao) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
+      await operacionalService.alterarResponsavel(denuncia.id, {
+        organizacaoDestinoId: Number(destinoReatribuicao),
+        motivo: motivoReatribuicao.trim() || null,
+      });
+      setReatribuicaoAberta(false);
+      setDestinoReatribuicao('');
+      setMotivoReatribuicao('');
+      setSuccessTone('success');
+      setSuccessMessage('Responsavel alterado com sucesso.');
+      await carregarDetalhe();
     } catch (err) {
       setActionError(getApiErrorMessage(err));
     } finally {
@@ -383,7 +584,7 @@ export function ReportDetailPage() {
   }
 
   return (
-    <div className="fixed inset-0 bg-background z-50 flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
       <header className="sticky top-0 z-10 bg-card border-b border-border">
         <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
           <Logo size="md" showText={true} />
@@ -410,7 +611,7 @@ export function ReportDetailPage() {
                       <button
                         onClick={() => {
                           setIsProfileOpen(false);
-                          navigate('/perfil');
+                          navigate(profilePath);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left"
                       >
@@ -433,8 +634,7 @@ export function ReportDetailPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-5 space-y-5">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-5 space-y-5">
           <button
             onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg px-1 py-1"
@@ -456,6 +656,36 @@ export function ReportDetailPage() {
                 : 'bg-emerald-50 border-emerald-200 text-emerald-700'
             }`}>
               {successMessage}
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-base font-display font-semibold text-foreground">
+                    Acoes da prefeitura
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Atualize o status, publique resposta oficial e reatribua o relato sem sair desta pagina.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => setStatusAberto(true)}>
+                    Atualizar status
+                  </Button>
+                  <Button variant="outline" onClick={() => setRespostaAberta(true)}>
+                    Resposta oficial
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setReatribuicaoAberta(true)}
+                    disabled={secretariasPrefeitura.length === 0}
+                  >
+                    Reatribuir secretaria
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -548,9 +778,9 @@ export function ReportDetailPage() {
                 <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                   {report.category}
                 </span>
-                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                  {report.status}
-                </span>
+                <Badge className={statusDenunciaColors[denuncia.status]}>
+                  {statusDenunciaLabels[denuncia.status]}
+                </Badge>
                 {denuncia.organizacaoResponsavelNome && (
                   <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
                     {responsavelNome}
@@ -674,17 +904,13 @@ export function ReportDetailPage() {
                         {index < timeline.length - 1 && <div className="w-0.5 h-full min-h-10 bg-border" />}
                       </div>
                       <div className="flex-1 pb-5">
-                        <div className={`font-medium mb-1 ${
+                      <div className={`font-medium mb-1 ${
                           isTimelineDangerEvent(evento) ? 'text-red-700' : 'text-foreground'
                         }`}>
                           {timelineTitle(evento)}
                         </div>
                         <div className="text-xs text-muted-foreground mb-2">{timeAgo(evento.criadoEm)}</div>
-                        <p className={`text-sm ${
-                          isTimelineDangerEvent(evento) ? 'text-red-700' : 'text-foreground'
-                        }`}>
-                          {evento.descricao}
-                        </p>
+                        {renderTimelineDescription(evento)}
                         {(evento.organizacaoNome || evento.usuarioNome) && (
                           <p className="text-xs text-muted-foreground mt-2">
                             {evento.organizacaoNome
@@ -789,10 +1015,35 @@ export function ReportDetailPage() {
                   </button>
                 </div>
               )}
+
+              {isOperacional && (
+                <div className="space-y-3 mt-auto pt-4 border-t border-border">
+                  <div>
+                    <h3 className="text-sm font-medium text-foreground">Resposta oficial</h3>
+                    <p className="text-xs text-muted-foreground">
+                      A resposta sera publicada em nome de {formatOrganizationName(vinculoOperacional?.nomeOrganizacao, denuncia.cidade)}.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Textarea
+                      placeholder="Escreva uma resposta oficial para o relato..."
+                      value={respostaOficial}
+                      onChange={(event) => setRespostaOficial(event.target.value)}
+                      className="min-h-24 border-border bg-background/80 shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
+                    />
+                    <button
+                      onClick={publicarRespostaOficial}
+                      disabled={isSubmitting || respostaOficial.trim().length < 5 || !organizacaoExecutoraId}
+                      className="w-12 h-12 bg-primary text-primary-foreground rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
 
       <Dialog open={Boolean(feedbackMode)} onOpenChange={(open) => !open && setFeedbackMode(null)}>
         <DialogContent>
@@ -812,6 +1063,107 @@ export function ReportDetailPage() {
             <Button variant="outline" onClick={() => setFeedbackMode(null)}>Cancelar</Button>
             <Button onClick={enviarFeedbackConclusao} disabled={isSubmitting}>
               Enviar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={statusAberto} onOpenChange={setStatusAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Atualizar status do relato</DialogTitle>
+            <DialogDescription>
+              Registre a etapa atual do atendimento pela prefeitura.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Select value={novoStatus} onValueChange={(value) => setNovoStatus(value as StatusDenuncia)}>
+                <SelectTrigger className="border-border bg-background/80 shadow-sm">
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOperacionaisDisponiveis.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {statusDenunciaLabels[option]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Textarea
+              value={motivoStatus}
+              onChange={(event) => setMotivoStatus(event.target.value)}
+              placeholder="Explique a atualizacao para aparecer no acompanhamento."
+              className="min-h-24 border-border bg-background/80 shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusAberto(false)}>Cancelar</Button>
+            <Button onClick={atualizarStatusOperacional} disabled={isSubmitting || !organizacaoExecutoraId}>
+              Salvar status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={respostaAberta} onOpenChange={setRespostaAberta}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Publicar resposta oficial</DialogTitle>
+            <DialogDescription>
+              A resposta sera destacada no relato como posicionamento institucional.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={respostaOficial}
+            onChange={(event) => setRespostaOficial(event.target.value)}
+            placeholder="Escreva a resposta oficial..."
+            className="min-h-28 border-border bg-background/80 shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRespostaAberta(false)}>Cancelar</Button>
+            <Button onClick={publicarRespostaOficial} disabled={isSubmitting || respostaOficial.trim().length < 5 || !organizacaoExecutoraId}>
+              Publicar resposta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reatribuicaoAberta} onOpenChange={setReatribuicaoAberta}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reatribuir secretaria responsavel</DialogTitle>
+            <DialogDescription>
+              Escolha a secretaria que passara a responder pelo relato.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Select value={destinoReatribuicao} onValueChange={setDestinoReatribuicao}>
+              <SelectTrigger className="border-border bg-background/80 shadow-sm">
+                <SelectValue placeholder="Selecione a secretaria" />
+              </SelectTrigger>
+              <SelectContent>
+                {secretariasPrefeitura
+                  .filter((secretaria) => secretaria.id !== denuncia.organizacaoResponsavelId)
+                  .map((secretaria) => (
+                    <SelectItem key={secretaria.id} value={String(secretaria.id)}>
+                      {secretaria.nome}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <Textarea
+              value={motivoReatribuicao}
+              onChange={(event) => setMotivoReatribuicao(event.target.value)}
+              placeholder="Motivo opcional para registrar a mudanca."
+              className="min-h-24 border-border bg-background/80 shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReatribuicaoAberta(false)}>Cancelar</Button>
+            <Button onClick={reatribuirResponsavel} disabled={isSubmitting || !destinoReatribuicao}>
+              Reatribuir
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -206,6 +206,13 @@ public class DenunciaService {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario nao possui vinculo ativo com a organizacao informada.");
 		}
 
+		if (request.status() == StatusDenuncia.ARQUIVADO) {
+			throw new ResponseStatusException(
+					HttpStatus.FORBIDDEN,
+					"Arquivamento de denuncia e uma acao exclusiva da moderacao."
+			);
+		}
+
 		validarOrganizacaoResponsavel(denuncia, organizacao, usuario);
 
 		StatusDenuncia statusAnterior = denuncia.getStatus();

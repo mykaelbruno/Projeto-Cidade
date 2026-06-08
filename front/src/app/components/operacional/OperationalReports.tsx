@@ -66,6 +66,13 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
   const [busca, setBusca] = useState('');
   const [status, setStatus] = useState<StatusFiltro>('TODOS');
   const [categoriaId, setCategoriaId] = useState<CategoriaFiltro>('TODAS');
+  const [filtrosAplicados, setFiltrosAplicados] = useState({
+    cidade: '',
+    bairro: '',
+    busca: '',
+    status: 'TODOS' as StatusFiltro,
+    categoriaId: 'TODAS' as CategoriaFiltro,
+  });
   const [erro, setErro] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -115,11 +122,11 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
       const [paginaDenuncias, listaCategorias, listaOrganizacoes, paginaTransferencias] =
         await Promise.all([
           operacionalService.listarDenuncias(vinculo.organizacaoId, {
-            cidade,
-            bairro,
-            status: status === 'TODOS' ? null : status,
-            categoriaId: categoriaId === 'TODAS' ? null : Number(categoriaId),
-            termo: busca,
+            cidade: filtrosAplicados.cidade,
+            bairro: filtrosAplicados.bairro,
+            status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
+            categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
+            termo: filtrosAplicados.busca,
             page: paginaAtual,
             size: tamanhoPagina,
           }),
@@ -140,15 +147,11 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     } finally {
       setCarregando(false);
     }
-  }, [bairro, busca, categoriaId, cidade, modo, paginaAtual, status, tamanhoPagina, vinculo]);
+  }, [filtrosAplicados, modo, paginaAtual, tamanhoPagina, vinculo]);
 
   useEffect(() => {
     carregarDados();
   }, [carregarDados]);
-
-  useEffect(() => {
-    setPaginaAtual(0);
-  }, [bairro, busca, categoriaId, cidade, status, tamanhoPagina]);
 
   const denunciasFiltradas = denuncias;
 
@@ -167,7 +170,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
   }, [denunciasFiltradas, modo, vinculo]);
 
   function getOrganizacaoAcaoId(denuncia: DenunciaResponseDTO) {
-    return denuncia.organizacaoResponsavelId ?? vinculo?.organizacaoId ?? 0;
+    return vinculo?.organizacaoId ?? denuncia.organizacaoResponsavelId ?? 0;
   }
 
   function abrirStatus(denuncia: DenunciaResponseDTO) {
@@ -292,11 +295,11 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
 
     try {
       const blob = await operacionalService.baixarCsv(vinculo.organizacaoId, {
-        cidade,
-        bairro,
-        status: status === 'TODOS' ? null : status,
-        categoriaId: categoriaId === 'TODAS' ? null : Number(categoriaId),
-        termo: busca,
+        cidade: filtrosAplicados.cidade,
+        bairro: filtrosAplicados.bairro,
+        status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
+        categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
+        termo: filtrosAplicados.busca,
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -309,6 +312,17 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     }
   }
 
+  function aplicarFiltros() {
+    setPaginaAtual(0);
+    setFiltrosAplicados({
+      cidade: cidade.trim(),
+      bairro: bairro.trim(),
+      busca: busca.trim(),
+      status,
+      categoriaId,
+    });
+  }
+
   function limparFiltros() {
     setCidade('');
     setBairro('');
@@ -316,6 +330,13 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     setStatus('TODOS');
     setCategoriaId('TODAS');
     setPaginaAtual(0);
+    setFiltrosAplicados({
+      cidade: '',
+      bairro: '',
+      busca: '',
+      status: 'TODOS',
+      categoriaId: 'TODAS',
+    });
   }
 
   if (carregando) {
@@ -442,7 +463,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
             </Select>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="outline" onClick={carregarDados}>Aplicar filtros</Button>
+            <Button variant="outline" onClick={aplicarFiltros}>Aplicar filtros</Button>
             <Button variant="ghost" onClick={limparFiltros}>Limpar</Button>
           </div>
         </CardContent>
@@ -497,7 +518,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
           <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
             <div className="text-sm text-muted-foreground">
               Mostrando {paginaDenuncias.numberOfElements} de {paginaDenuncias.totalElements} relatos
-              {busca.trim() ? ' nesta pagina filtrada pela busca local' : ''}.
+              {filtrosAplicados.busca ? ' nesta pagina filtrada pela busca atual' : ''}.
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex items-center gap-2">
@@ -554,7 +575,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
               <Select value={novoStatus} onValueChange={(value) => setNovoStatus(value as StatusDenuncia)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {statusDenunciaOptions.map((option) => (
+                  {statusDenunciaOptions.filter((option) => option !== 'ARQUIVADO').map((option) => (
                     <SelectItem key={option} value={option}>{statusDenunciaLabels[option]}</SelectItem>
                   ))}
                 </SelectContent>

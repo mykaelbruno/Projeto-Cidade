@@ -27,17 +27,17 @@ export const organizacaoService = {
     return apiRequest<BairroResponseDTO[]>(`/api/prefeituras/${prefeituraId}/bairros`);
   },
 
-  criarBairro(prefeituraId: number, nome: string) {
+  criarBairro(prefeituraId: number, nome: string, centroideLatitude?: number | null, centroideLongitude?: number | null) {
     return apiRequest<BairroResponseDTO>(`/api/prefeituras/${prefeituraId}/bairros`, {
       method: 'POST',
-      body: { nome },
+      body: { nome, centroideLatitude, centroideLongitude },
     });
   },
 
-  atualizarBairro(prefeituraId: number, bairroId: number, nome: string) {
+  atualizarBairro(prefeituraId: number, bairroId: number, nome: string, centroideLatitude?: number | null, centroideLongitude?: number | null) {
     return apiRequest<BairroResponseDTO>(`/api/prefeituras/${prefeituraId}/bairros/${bairroId}`, {
       method: 'PUT',
-      body: { nome },
+      body: { nome, centroideLatitude, centroideLongitude },
     });
   },
 

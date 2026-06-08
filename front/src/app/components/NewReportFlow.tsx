@@ -93,6 +93,7 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
   const activeCategories = useMemo(() => categorias.filter((categoria) => categoria.ativa), [categorias]);
   const selectedCategory = activeCategories.find((categoria) => categoria.id === selectedCategoryId);
   const selectedPrefeitura = prefeituras.find((prefeitura) => prefeitura.id === selectedPrefeituraId);
+  const selectedBairro = bairros.find((bairro) => bairro.nome === neighborhood);
 
   useEffect(() => {
     categoriaService.listar()
@@ -177,6 +178,8 @@ export function NewReportFlow({ onClose, onComplete }: NewReportFlowProps) {
       titulo: title.trim(),
       descricao: description.trim(),
       categoriaId: selectedCategoryId as number,
+      prefeituraId: selectedPrefeituraId,
+      bairroId: selectedBairro?.id ?? null,
       anonima: isAnonymous,
       cidade: city.trim(),
       bairro: neighborhood.trim(),

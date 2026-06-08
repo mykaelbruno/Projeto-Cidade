@@ -1,0 +1,12 @@
+.git
+.gitignore
+.idea
+.vscode
+target
+uploads
+docs
+front
+frontend
+node_modules
+.env
+*.log

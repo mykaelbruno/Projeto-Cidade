@@ -1,5 +1,7 @@
 package com.mykael.prefeitura.core.sinalizacao;
 
+import com.mykael.prefeitura.core.comentario.Comentario;
+import com.mykael.prefeitura.core.comentario.ComentarioRepository;
 import com.mykael.prefeitura.core.denuncia.Denuncia;
 import com.mykael.prefeitura.core.denuncia.DenunciaRepository;
 import com.mykael.prefeitura.core.notificacao.NotificacaoService;
@@ -27,19 +29,22 @@ public class SinalizacaoDenunciaService {
 	private final UsuarioRepository usuarioRepository;
 	private final NotificacaoService notificacaoService;
 	private final AuditoriaService auditoriaService;
+	private final ComentarioRepository comentarioRepository;
 
 	public SinalizacaoDenunciaService(
 			SinalizacaoDenunciaRepository sinalizacaoRepository,
 			DenunciaRepository denunciaRepository,
 			UsuarioRepository usuarioRepository,
 			NotificacaoService notificacaoService,
-			AuditoriaService auditoriaService
+			AuditoriaService auditoriaService,
+			ComentarioRepository comentarioRepository
 	) {
 		this.sinalizacaoRepository = sinalizacaoRepository;
 		this.denunciaRepository = denunciaRepository;
 		this.usuarioRepository = usuarioRepository;
 		this.notificacaoService = notificacaoService;
 		this.auditoriaService = auditoriaService;
+		this.comentarioRepository = comentarioRepository;
 	}
 
 	@Transactional
@@ -72,6 +77,53 @@ public class SinalizacaoDenunciaService {
 				TipoNotificacao.SINALIZACAO_DENUNCIA_RECEBIDA,
 				"Nova sinalizacao de denuncia",
 				"Uma denuncia recebeu sinalizacao e precisa de revisao.",
+				"/moderacao/sinalizacoes/" + salva.getId()
+		);
+		return SinalizacaoDenunciaResponseDTO.from(salva);
+	}
+
+	@Transactional
+	public SinalizacaoDenunciaResponseDTO sinalizarComentario(
+			Long denunciaId,
+			Long comentarioId,
+			Long autorId,
+			SinalizacaoDenunciaRequestDTO request
+	) {
+		Comentario comentario = comentarioRepository.findById(comentarioId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comentario nao encontrado."));
+		if (!comentario.getDenuncia().getId().equals(denunciaId)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comentario nao pertence a denuncia informada.");
+		}
+		if (comentario.getRemovidoEm() != null) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comentario removido nao pode ser sinalizado.");
+		}
+		Usuario autor = usuarioRepository.findById(autorId)
+				.filter(Usuario::isAtivo)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario autenticado nao encontrado ou inativo."));
+
+		if (sinalizacaoRepository.existsByComentarioSinalizadoIdAndAutorId(comentarioId, autorId)) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "Usuario ja sinalizou este comentario.");
+		}
+
+		SinalizacaoDenuncia sinalizacao = new SinalizacaoDenuncia();
+		sinalizacao.setDenuncia(comentario.getDenuncia());
+		sinalizacao.setComentarioSinalizado(comentario);
+		sinalizacao.setAutor(autor);
+		sinalizacao.setMotivo(request.motivo());
+		sinalizacao.setComentario(request.comentario().trim());
+		SinalizacaoDenuncia salva = sinalizacaoRepository.save(sinalizacao);
+		auditoriaService.registrar(
+				TipoAcaoAuditoria.SINALIZACAO_CRIADA,
+				TipoAlvoAuditoria.SINALIZACAO,
+				salva.getId(),
+				"Sinalizacao de comentario criada.",
+				"Denuncia id: " + comentario.getDenuncia().getId() + ", comentario id: " + comentario.getId()
+		);
+		notificacaoService.notificarModeradores(
+				comentario.getDenuncia(),
+				TipoNotificacao.SINALIZACAO_DENUNCIA_RECEBIDA,
+				"Nova sinalizacao de comentario",
+				"Um comentario recebeu sinalizacao e precisa de revisao.",
 				"/moderacao/sinalizacoes/" + salva.getId()
 		);
 		return SinalizacaoDenunciaResponseDTO.from(salva);

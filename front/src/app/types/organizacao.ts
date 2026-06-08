@@ -22,6 +22,8 @@ export interface BairroResponseDTO {
   cidade: string;
   estado: string;
   nome: string;
+  centroideLatitude: number | null;
+  centroideLongitude: number | null;
   ativo: boolean;
   criadoEm: string;
   atualizadoEm: string;

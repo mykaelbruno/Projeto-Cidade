@@ -18,8 +18,12 @@ export function BairrosPage() {
   const [bairros, setBairros] = useState<BairroResponseDTO[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [nomeBairro, setNomeBairro] = useState('');
+  const [centroideLatitude, setCentroideLatitude] = useState('');
+  const [centroideLongitude, setCentroideLongitude] = useState('');
   const [bairroEditando, setBairroEditando] = useState<BairroResponseDTO | null>(null);
   const [nomeEdicao, setNomeEdicao] = useState('');
+  const [centroideLatitudeEdicao, setCentroideLatitudeEdicao] = useState('');
+  const [centroideLongitudeEdicao, setCentroideLongitudeEdicao] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +64,39 @@ export function BairrosPage() {
       bairro.estado.toLowerCase().includes(termo));
   }, [bairros, searchTerm]);
 
+  function parseCoordenadaOpcional(value: string) {
+    const normalized = value.trim().replace(',', '.');
+    if (!normalized) {
+      return null;
+    }
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : Number.NaN;
+  }
+
+  function validarCentroide(latitudeValue: string, longitudeValue: string) {
+    const latitude = parseCoordenadaOpcional(latitudeValue);
+    const longitude = parseCoordenadaOpcional(longitudeValue);
+
+    if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      return { invalido: true, latitude: null, longitude: null };
+    }
+
+    if ((latitude === null && longitude !== null) || (latitude !== null && longitude === null)) {
+      return { invalido: true, latitude: null, longitude: null };
+    }
+
+    if (latitude !== null && (latitude < -90 || latitude > 90)) {
+      return { invalido: true, latitude: null, longitude: null };
+    }
+
+    if (longitude !== null && (longitude < -180 || longitude > 180)) {
+      return { invalido: true, latitude: null, longitude: null };
+    }
+
+    return { invalido: false, latitude, longitude };
+  }
+
   async function criarBairro() {
     if (!prefeituraId || nomeBairro.trim().length < 2) {
       return;
@@ -69,9 +106,22 @@ export function BairrosPage() {
     setError(null);
 
     try {
-      const criado = await organizacaoService.criarBairro(prefeituraId, nomeBairro.trim());
+      const centroide = validarCentroide(centroideLatitude, centroideLongitude);
+      if (centroide.invalido) {
+        setError('Informe latitude e longitude validas para o centroide, ou deixe os dois campos vazios.');
+        return;
+      }
+
+      const criado = await organizacaoService.criarBairro(
+        prefeituraId,
+        nomeBairro.trim(),
+        centroide.latitude,
+        centroide.longitude,
+      );
       setBairros((current) => [...current, criado].sort((a, b) => a.nome.localeCompare(b.nome)));
       setNomeBairro('');
+      setCentroideLatitude('');
+      setCentroideLongitude('');
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -88,12 +138,26 @@ export function BairrosPage() {
     setError(null);
 
     try {
-      const atualizado = await organizacaoService.atualizarBairro(prefeituraId, bairroEditando.id, nomeEdicao.trim());
+      const centroide = validarCentroide(centroideLatitudeEdicao, centroideLongitudeEdicao);
+      if (centroide.invalido) {
+        setError('Informe latitude e longitude validas para o centroide, ou deixe os dois campos vazios.');
+        return;
+      }
+
+      const atualizado = await organizacaoService.atualizarBairro(
+        prefeituraId,
+        bairroEditando.id,
+        nomeEdicao.trim(),
+        centroide.latitude,
+        centroide.longitude,
+      );
       setBairros((current) => current
         .map((bairro) => bairro.id === atualizado.id ? atualizado : bairro)
         .sort((a, b) => a.nome.localeCompare(b.nome)));
       setBairroEditando(null);
       setNomeEdicao('');
+      setCentroideLatitudeEdicao('');
+      setCentroideLongitudeEdicao('');
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -167,7 +231,7 @@ export function BairrosPage() {
           <div>
             <h3 className="font-display font-semibold text-foreground">Novo bairro</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Cadastre o nome oficial do bairro.
+              Cadastre o nome oficial do bairro e, se souber, o ponto central usado no mapa.
             </p>
           </div>
 
@@ -180,6 +244,29 @@ export function BairrosPage() {
               placeholder="Ex: Centro"
               maxLength={100}
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="centroide-latitude">Latitude</Label>
+              <Input
+                id="centroide-latitude"
+                value={centroideLatitude}
+                onChange={(event) => setCentroideLatitude(event.target.value)}
+                placeholder="Ex: -6.838"
+                inputMode="decimal"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="centroide-longitude">Longitude</Label>
+              <Input
+                id="centroide-longitude"
+                value={centroideLongitude}
+                onChange={(event) => setCentroideLongitude(event.target.value)}
+                placeholder="Ex: -35.126"
+                inputMode="decimal"
+              />
+            </div>
           </div>
 
           <Button className="w-full" onClick={criarBairro} disabled={isSaving || nomeBairro.trim().length < 2 || !prefeituraId}>
@@ -240,6 +327,11 @@ export function BairrosPage() {
                     <p className="text-sm text-muted-foreground mt-1">
                       {bairro.cidade} - {bairro.estado}
                     </p>
+                    {bairro.centroideLatitude !== null && bairro.centroideLongitude !== null && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Centroide: {bairro.centroideLatitude.toFixed(5)}, {bairro.centroideLongitude.toFixed(5)}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -250,6 +342,8 @@ export function BairrosPage() {
                     onClick={() => {
                       setBairroEditando(bairro);
                       setNomeEdicao(bairro.nome);
+                      setCentroideLatitudeEdicao(bairro.centroideLatitude?.toString() ?? '');
+                      setCentroideLongitudeEdicao(bairro.centroideLongitude?.toString() ?? '');
                     }}
                   >
                     <Edit className="w-4 h-4 mr-2" />
@@ -280,7 +374,16 @@ export function BairrosPage() {
         </div>
       </div>
 
-      <Dialog open={Boolean(bairroEditando)} onOpenChange={(open) => !open && setBairroEditando(null)}>
+      <Dialog
+        open={Boolean(bairroEditando)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBairroEditando(null);
+            setCentroideLatitudeEdicao('');
+            setCentroideLongitudeEdicao('');
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar bairro</DialogTitle>
@@ -296,6 +399,26 @@ export function BairrosPage() {
               onChange={(event) => setNomeEdicao(event.target.value)}
               maxLength={100}
             />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="centroide-latitude-edicao">Latitude</Label>
+              <Input
+                id="centroide-latitude-edicao"
+                value={centroideLatitudeEdicao}
+                onChange={(event) => setCentroideLatitudeEdicao(event.target.value)}
+                inputMode="decimal"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="centroide-longitude-edicao">Longitude</Label>
+              <Input
+                id="centroide-longitude-edicao"
+                value={centroideLongitudeEdicao}
+                onChange={(event) => setCentroideLongitudeEdicao(event.target.value)}
+                inputMode="decimal"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBairroEditando(null)}>Cancelar</Button>

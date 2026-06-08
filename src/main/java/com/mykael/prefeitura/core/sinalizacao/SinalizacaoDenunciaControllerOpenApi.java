@@ -43,6 +43,18 @@ public interface SinalizacaoDenunciaControllerOpenApi {
 			Jwt jwt
 	);
 
+	@Operation(summary = "Sinaliza comentario", description = "Permite que qualquer usuario autenticado reporte um comentario para moderacao.")
+	@SecurityRequirement(name = "cookieAuth")
+	@ApiResponse(responseCode = "201", description = "Sinalizacao de comentario criada.")
+	ResponseEntity<SinalizacaoDenunciaResponseDTO> sinalizarComentario(
+			@Parameter(description = "Identificador da denuncia.", in = ParameterIn.PATH) Long denunciaId,
+			@Parameter(description = "Identificador do comentario.", in = ParameterIn.PATH) Long comentarioId,
+			@Valid
+			@RequestBody(content = @Content(schema = @Schema(implementation = SinalizacaoDenunciaRequestDTO.class), examples = @ExampleObject(value = OpenApiExemplos.SINALIZACAO)))
+			SinalizacaoDenunciaRequestDTO request,
+			Jwt jwt
+	);
+
 	@Operation(summary = "Lista sinalizacoes para moderacao", description = "Retorna reports de denuncia para ADMIN_APP e MODERADOR. Por padrao lista apenas pendentes.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Sinalizacoes retornadas.")

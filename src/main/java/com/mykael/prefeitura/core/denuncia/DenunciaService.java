@@ -1,6 +1,8 @@
 package com.mykael.prefeitura.core.denuncia;
 
 import com.mykael.prefeitura.core.anexo.AnexoDenunciaRepository;
+import com.mykael.prefeitura.core.bairro.Bairro;
+import com.mykael.prefeitura.core.bairro.BairroRepository;
 import com.mykael.prefeitura.core.categoria.Categoria;
 import com.mykael.prefeitura.core.categoria.CategoriaRepository;
 import com.mykael.prefeitura.core.denuncia.dto.DenunciaCreateRequestDTO;
@@ -12,6 +14,7 @@ import com.mykael.prefeitura.core.notificacao.NotificacaoService;
 import com.mykael.prefeitura.core.notificacao.TipoNotificacao;
 import com.mykael.prefeitura.core.organizacao.Organizacao;
 import com.mykael.prefeitura.core.organizacao.OrganizacaoRepository;
+import com.mykael.prefeitura.core.organizacao.TipoOrganizacao;
 import com.mykael.prefeitura.core.timeline.TimelineDenunciaService;
 import com.mykael.prefeitura.core.usuario.Usuario;
 import com.mykael.prefeitura.core.usuario.UsuarioRepository;
@@ -53,6 +56,7 @@ public class DenunciaService {
 	private final VisibilidadeDenunciaService visibilidadeDenunciaService;
 	private final ComentarioRepository comentarioRepository;
 	private final AnexoDenunciaRepository anexoRepository;
+	private final BairroRepository bairroRepository;
 
 	public DenunciaService(
 			DenunciaRepository denunciaRepository,
@@ -66,7 +70,8 @@ public class DenunciaService {
 			AntispamService antispamService,
 			VisibilidadeDenunciaService visibilidadeDenunciaService,
 			ComentarioRepository comentarioRepository,
-			AnexoDenunciaRepository anexoRepository
+			AnexoDenunciaRepository anexoRepository,
+			BairroRepository bairroRepository
 	) {
 		this.denunciaRepository = denunciaRepository;
 		this.usuarioRepository = usuarioRepository;
@@ -80,6 +85,7 @@ public class DenunciaService {
 		this.visibilidadeDenunciaService = visibilidadeDenunciaService;
 		this.comentarioRepository = comentarioRepository;
 		this.anexoRepository = anexoRepository;
+		this.bairroRepository = bairroRepository;
 	}
 
 	@Transactional
@@ -91,7 +97,8 @@ public class DenunciaService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoria ativa nao encontrada."));
 
 		antispamService.validarConteudoDenuncia(request.titulo(), request.descricao());
-		validarDenunciaRepetida(request, autorId, categoria.getId());
+		LocalizacaoDenuncia localizacao = validarLocalizacaoDaDenuncia(request, autor);
+		validarDenunciaRepetida(request, autorId, categoria.getId(), localizacao.cidade(), localizacao.bairro());
 
 		Denuncia denuncia = new Denuncia();
 		denuncia.setTitulo(request.titulo().trim());
@@ -100,8 +107,10 @@ public class DenunciaService {
 		denuncia.setStatus(StatusDenuncia.ABERTO);
 		denuncia.setAutor(autor);
 		denuncia.setAnonima(request.anonima());
-		denuncia.setCidade(request.cidade().trim());
-		denuncia.setBairro(request.bairro().trim());
+		denuncia.setCidade(localizacao.cidade());
+		denuncia.setBairro(localizacao.bairro());
+		denuncia.setPrefeitura(localizacao.prefeitura());
+		denuncia.setBairroControlado(localizacao.bairroControlado());
 		denuncia.setRua(trimOrNull(request.rua()));
 		denuncia.setPontoReferencia(trimOrNull(request.pontoReferencia()));
 		denuncia.setLatitude(request.latitude());
@@ -412,10 +421,14 @@ public class DenunciaService {
 		}
 	}
 
-	private void validarDenunciaRepetida(DenunciaCreateRequestDTO request, Long autorId, Long categoriaId) {
+	private void validarDenunciaRepetida(
+			DenunciaCreateRequestDTO request,
+			Long autorId,
+			Long categoriaId,
+			String cidade,
+			String bairro
+	) {
 		antispamService.inicioJanelaDenunciaRepetida().ifPresent(inicioJanela -> {
-			String cidade = request.cidade().trim();
-			String bairro = request.bairro().trim();
 			String assinaturaNova = antispamService.assinatura(request.titulo(), request.descricao());
 			List<String> assinaturasRecentes = denunciaRepository.findRecentesParaAntispam(
 							autorId,
@@ -428,6 +441,58 @@ public class DenunciaService {
 					.toList();
 			antispamService.validarDenunciaNaoRepetida(assinaturaNova, assinaturasRecentes);
 		});
+	}
+
+	private LocalizacaoDenuncia validarLocalizacaoDaDenuncia(DenunciaCreateRequestDTO request, Usuario autor) {
+		if (!StringUtils.hasText(autor.getCidade())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Usuario nao possui cidade cadastrada.");
+		}
+
+		String cidadeUsuario = autor.getCidade().trim();
+		Organizacao prefeitura = null;
+		if (request.prefeituraId() != null) {
+			prefeitura = organizacaoRepository.findById(request.prefeituraId())
+					.filter(Organizacao::isAtiva)
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prefeitura ativa nao encontrada."));
+			if (prefeitura.getTipo() != TipoOrganizacao.PREFEITURA) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Organizacao informada nao e uma prefeitura.");
+			}
+			if (!prefeitura.getCidade().equalsIgnoreCase(cidadeUsuario)) {
+				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Morador so pode criar denuncia para sua propria cidade.");
+			}
+		} else {
+			if (!StringUtils.hasText(request.cidade()) || !request.cidade().trim().equalsIgnoreCase(cidadeUsuario)) {
+				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Morador so pode criar denuncia para sua propria cidade.");
+			}
+			prefeitura = organizacaoRepository.findByTipoAndAtivaTrue(TipoOrganizacao.PREFEITURA)
+					.stream()
+					.filter(item -> item.getCidade().equalsIgnoreCase(cidadeUsuario))
+					.findFirst()
+					.orElse(null);
+		}
+
+		if (prefeitura == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Prefeitura ativa da cidade do morador nao encontrada.");
+		}
+
+		Bairro bairroControlado;
+		if (request.bairroId() != null) {
+			bairroControlado = bairroRepository.findByIdAndPrefeituraIdAndAtivoTrue(request.bairroId(), prefeitura.getId())
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bairro ativo nao encontrado nesta prefeitura."));
+		} else {
+			bairroControlado = bairroRepository.findByPrefeituraIdAndNomeIgnoreCaseAndAtivoTrue(prefeitura.getId(), request.bairro().trim())
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bairro ativo nao encontrado nesta prefeitura."));
+		}
+
+		return new LocalizacaoDenuncia(prefeitura.getCidade(), bairroControlado.getNome(), prefeitura, bairroControlado);
+	}
+
+	private record LocalizacaoDenuncia(
+			String cidade,
+			String bairro,
+			Organizacao prefeitura,
+			Bairro bairroControlado
+	) {
 	}
 
 	@Transactional

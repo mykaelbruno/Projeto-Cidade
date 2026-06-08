@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -62,6 +63,18 @@ public class ComentarioController implements ComentarioControllerOpenApi {
 			@PageableDefault(size = 20, sort = "criadoEm") Pageable pageable
 	) {
 		return comentarioService.listarPorDenuncia(denunciaId, UsuarioAutenticado.from(jwt), pageable);
+	}
+
+	@Override
+	@DeleteMapping("/comentarios/{comentarioId}")
+	@PreAuthorize("isAuthenticated()")
+	public ResponseEntity<Void> removerProprioComentario(
+			@PathVariable Long denunciaId,
+			@PathVariable Long comentarioId,
+			@AuthenticationPrincipal Jwt jwt
+	) {
+		comentarioService.removerProprioComentario(denunciaId, comentarioId, usuarioId(jwt));
+		return ResponseEntity.noContent().build();
 	}
 
 	private Long usuarioId(Jwt jwt) {

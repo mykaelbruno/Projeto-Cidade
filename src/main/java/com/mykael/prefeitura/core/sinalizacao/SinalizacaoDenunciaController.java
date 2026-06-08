@@ -45,6 +45,24 @@ public class SinalizacaoDenunciaController implements SinalizacaoDenunciaControl
 	}
 
 	@Override
+	@PostMapping("/api/denuncias/{denunciaId}/comentarios/{comentarioId}/sinalizacoes")
+	@PreAuthorize("isAuthenticated()")
+	public ResponseEntity<SinalizacaoDenunciaResponseDTO> sinalizarComentario(
+			@PathVariable Long denunciaId,
+			@PathVariable Long comentarioId,
+			@Valid @RequestBody SinalizacaoDenunciaRequestDTO request,
+			@AuthenticationPrincipal Jwt jwt
+	) {
+		SinalizacaoDenunciaResponseDTO response = sinalizacaoService.sinalizarComentario(
+				denunciaId,
+				comentarioId,
+				Long.valueOf(jwt.getSubject()),
+				request
+		);
+		return ResponseEntity.status(201).body(response);
+	}
+
+	@Override
 	@GetMapping("/api/moderacoes/sinalizacoes-denuncia")
 	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
 	public Page<SinalizacaoDenunciaResponseDTO> listarParaModeracao(

@@ -1,6 +1,7 @@
 package com.mykael.prefeitura.core.denuncia;
 
 import com.mykael.prefeitura.core.categoria.Categoria;
+import com.mykael.prefeitura.core.bairro.Bairro;
 import com.mykael.prefeitura.core.organizacao.Organizacao;
 import com.mykael.prefeitura.core.usuario.Usuario;
 import jakarta.persistence.Column;
@@ -56,6 +57,14 @@ public class Denuncia {
 
 	@Column(name = "ponto_referencia", length = 200)
 	private String pontoReferencia;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "prefeitura_id")
+	private Organizacao prefeitura;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "bairro_id")
+	private Bairro bairroControlado;
 
 	private Double latitude;
 
@@ -175,6 +184,22 @@ public class Denuncia {
 
 	public void setPontoReferencia(String pontoReferencia) {
 		this.pontoReferencia = pontoReferencia;
+	}
+
+	public Organizacao getPrefeitura() {
+		return prefeitura;
+	}
+
+	public void setPrefeitura(Organizacao prefeitura) {
+		this.prefeitura = prefeitura;
+	}
+
+	public Bairro getBairroControlado() {
+		return bairroControlado;
+	}
+
+	public void setBairroControlado(Bairro bairroControlado) {
+		this.bairroControlado = bairroControlado;
 	}
 
 	public Double getLatitude() {

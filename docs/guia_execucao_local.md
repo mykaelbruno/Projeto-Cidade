@@ -2,7 +2,10 @@
 
 ## Objetivo
 
-Este guia serve para subir o projeto pela primeira vez em ambiente local, usando PostgreSQL via Docker Compose e configuracoes vindas do arquivo `.env`.
+Este guia serve para subir o projeto pela primeira vez em ambiente local, com dois modos suportados:
+
+- modo hibrido: PostgreSQL em Docker e backend/frontend rodando localmente;
+- modo full Docker: PostgreSQL, backend e frontend subindo juntos pelo Compose.
 
 ## Arquivos de configuracao
 
@@ -66,10 +69,24 @@ MAIL_FROM_NAME=Cidade Ativa
 
 Com `MAIL_ENABLED=false`, verificacao de conta e recuperacao de senha continuam funcionando em modo local pelos logs da aplicacao. Para testar envio real localmente, use um servidor SMTP de desenvolvimento, como MailHog/Mailpit, e mude `MAIL_ENABLED=true`.
 
-## Subir banco
+## Subir stack completa ou apenas o banco
+
+### Stack completa em Docker
 
 ```powershell
-docker compose up -d
+docker compose up -d --build
+```
+
+Servicos expostos por padrao:
+
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:8080`
+- banco: `localhost:5433`
+
+### Apenas banco para desenvolvimento hibrido
+
+```powershell
+docker compose up -d postgres
 ```
 
 O Docker Compose usa as variaveis do `.env`.
@@ -91,7 +108,7 @@ Passos recomendados:
 3. Rodar novamente:
 
 ```powershell
-docker compose up -d
+docker compose up -d --build
 ```
 
 Se o Docker Desktop nao abrir ou pedir configuracao do WSL, habilitar o backend Linux/WSL nas configuracoes do Docker Desktop.
@@ -112,17 +129,24 @@ Se ainda nao houver dados importantes no banco local, o caminho mais simples e r
 
 ```powershell
 docker compose down -v
-docker compose up -d
+docker compose up -d --build
 ```
 
 Depois, executar a aplicacao novamente.
 
 Se houver dados que precisam ser preservados, nao remover o volume. Nesse caso, ajustar `SPRING_DATASOURCE_PASSWORD` no `.env` para a senha real do banco ja criado, ou alterar a senha do usuario dentro do PostgreSQL.
 
-## Rodar aplicacao
+## Rodar aplicacao localmente no modo hibrido
 
 ```powershell
 .\mvnw.cmd spring-boot:run
+```
+
+Frontend:
+
+```powershell
+cd front
+npm run dev
 ```
 
 Ao iniciar, o Flyway cria o schema usando:
@@ -135,10 +159,16 @@ Se `ADMIN_APP_ENABLED=true`, o sistema cria o primeiro `ADMIN_APP` se ainda nao 
 
 ## Acessos uteis
 
-Swagger:
+Swagger do backend local:
 
 ```txt
 http://localhost:8080/swagger-ui.html
+```
+
+Frontend Dockerizado:
+
+```txt
+http://localhost:5173
 ```
 
 Health check:
@@ -227,7 +257,7 @@ Esta abordagem remove o container e limpa fisicamente o volume do Docker, fazend
    ```
 2. Inicie os containers novamente:
    ```powershell
-   docker compose up -d
+   docker compose up -d --build
    ```
 3. Rode a aplicação. As tabelas serão recriadas do zero automaticamente pelo Flyway:
    ```powershell

@@ -2,6 +2,7 @@ HELP.md
 target/
 uploads/
 .env
+front/dist/
 .mvn/wrapper/maven-wrapper.jar
 /.m2/
 !**/src/main/**/target/

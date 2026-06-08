@@ -15,6 +15,7 @@ import {
   MessageCircle,
   Send,
   ThumbsUp,
+  Trash2,
   User,
   UserCircle,
 } from 'lucide-react';
@@ -126,6 +127,7 @@ export function ReportDetailPage() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [comentarioAlvo, setComentarioAlvo] = useState<ComentarioResponseDTO | null>(null);
   const [motivo, setMotivo] = useState<MotivoSinalizacaoDenuncia>('SPAM');
   const [comentarioSinalizacao, setComentarioSinalizacao] = useState('');
 
@@ -285,14 +287,41 @@ export function ReportDetailPage() {
     setActionError(null);
 
     try {
-      await denunciaService.sinalizar(denuncia.id, {
+      const payload = {
         motivo,
         comentario: comentarioSinalizacao.trim(),
-      });
+      };
+      if (comentarioAlvo) {
+        await denunciaService.sinalizarComentario(denuncia.id, comentarioAlvo.id, payload);
+      } else {
+        await denunciaService.sinalizar(denuncia.id, payload);
+      }
       setComentarioSinalizacao('');
       setMotivo('SPAM');
+      setComentarioAlvo(null);
       setIsReportOpen(false);
-      setSuccessMessage('Sinalizacao enviada para a moderacao.');
+      setSuccessMessage(comentarioAlvo ? 'Comentario sinalizado para a moderacao.' : 'Sinalizacao enviada para a moderacao.');
+    } catch (err) {
+      setActionError(getApiErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function removerComentario(item: ComentarioResponseDTO) {
+    if (!denuncia) return;
+
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
+      await denunciaService.removerComentario(denuncia.id, item.id);
+      setComentarios((current) => current.filter((comentarioAtual) => comentarioAtual.id !== item.id));
+      setDenuncia((current) => current ? {
+        ...current,
+        quantidadeComentarios: Math.max(0, current.quantidadeComentarios - 1),
+      } : current);
+      setSuccessMessage('Comentario removido.');
     } catch (err) {
       setActionError(getApiErrorMessage(err));
     } finally {
@@ -519,7 +548,10 @@ export function ReportDetailPage() {
                     </button>
                   </div>
                   <button
-                    onClick={() => setIsReportOpen(true)}
+                    onClick={() => {
+                      setComentarioAlvo(null);
+                      setIsReportOpen(true);
+                    }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-card text-foreground border border-border rounded-xl font-medium hover:bg-muted transition-colors"
                   >
                     <Flag className="w-4 h-4" />
@@ -625,7 +657,7 @@ export function ReportDetailPage() {
                           : item.autorNome)}
                       </span>
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-medium text-foreground text-sm">
                           {item.oficial
@@ -640,6 +672,30 @@ export function ReportDetailPage() {
                         <span className="text-xs text-muted-foreground">{timeAgo(item.criadoEm)}</span>
                       </div>
                       <p className="text-sm text-foreground">{item.conteudo}</p>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2"
+                        onClick={() => {
+                          setComentarioAlvo(item);
+                          setIsReportOpen(true);
+                        }}
+                      >
+                        <Flag className="h-4 w-4" />
+                      </Button>
+                      {item.autorId === usuario?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-destructive hover:text-destructive"
+                          disabled={isSubmitting}
+                          onClick={() => removerComentario(item)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -690,10 +746,15 @@ export function ReportDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+      <Dialog open={isReportOpen} onOpenChange={(open) => {
+        setIsReportOpen(open);
+        if (!open) {
+          setComentarioAlvo(null);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Sinalizar relato</DialogTitle>
+            <DialogTitle>{comentarioAlvo ? 'Sinalizar comentario' : 'Sinalizar relato'}</DialogTitle>
             <DialogDescription>
               A moderacao vai avaliar o motivo e o comentario informado.
             </DialogDescription>

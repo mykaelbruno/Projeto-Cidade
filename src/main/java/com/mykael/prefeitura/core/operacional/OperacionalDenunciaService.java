@@ -73,13 +73,14 @@ public class OperacionalDenunciaService {
 			String bairro,
 			StatusDenuncia status,
 			Long categoriaId,
+			String termo,
 			Pageable pageable
 	) {
 		Organizacao organizacao = buscarOrganizacaoAtiva(organizacaoId);
 		if (organizacao.getTipo() == TipoOrganizacao.PREFEITURA) {
 			exigirAdminPrefeitura(usuarioId, organizacao.getId());
 			return denunciaRepository.findAll(
-							filtroDenunciasDaPrefeitura(organizacao.getId(), organizacao.getCidade(), cidade, bairro, status, categoriaId),
+							filtroDenunciasDaPrefeitura(organizacao.getId(), organizacao.getCidade(), cidade, bairro, status, categoriaId, termo),
 							pageable
 					)
 					.map(DenunciaResponseDTO::from);
@@ -87,7 +88,7 @@ public class OperacionalDenunciaService {
 
 		exigirVinculoAtivo(usuarioId, organizacao.getId());
 		return denunciaRepository.findAll(
-						filtroDenunciasDaSecretaria(organizacao.getId(), cidade, bairro, status, categoriaId),
+						filtroDenunciasDaSecretaria(organizacao.getId(), cidade, bairro, status, categoriaId, termo),
 						pageable
 				)
 				.map(DenunciaResponseDTO::from);
@@ -387,7 +388,8 @@ public class OperacionalDenunciaService {
 			String cidade,
 			String bairro,
 			StatusDenuncia status,
-			Long categoriaId
+			Long categoriaId,
+			String termo
 	) {
 		Specification<Denuncia> specification = (root, query, criteriaBuilder) -> {
 			var organizacao = root.join("organizacaoResponsavel", jakarta.persistence.criteria.JoinType.LEFT);
@@ -405,7 +407,7 @@ public class OperacionalDenunciaService {
 			
 			return criteriaBuilder.or(atribuido, abertoNaCidade);
 		};
-		return specification.and(filtrosBasicos(cidade, bairro, status, categoriaId));
+		return specification.and(filtrosBasicos(cidade, bairro, status, categoriaId, termo));
 	}
 
 	private Specification<Denuncia> filtroDenunciasDaSecretaria(
@@ -413,18 +415,20 @@ public class OperacionalDenunciaService {
 			String cidade,
 			String bairro,
 			StatusDenuncia status,
-			Long categoriaId
+			Long categoriaId,
+			String termo
 	) {
 		Specification<Denuncia> specification = (root, query, criteriaBuilder) ->
 				criteriaBuilder.equal(root.get("organizacaoResponsavel").get("id"), secretariaId);
-		return specification.and(filtrosBasicos(cidade, bairro, status, categoriaId));
+		return specification.and(filtrosBasicos(cidade, bairro, status, categoriaId, termo));
 	}
 
 	private Specification<Denuncia> filtrosBasicos(
 			String cidade,
 			String bairro,
 			StatusDenuncia status,
-			Long categoriaId
+			Long categoriaId,
+			String termo
 	) {
 		Specification<Denuncia> specification = (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
 
@@ -446,6 +450,19 @@ public class OperacionalDenunciaService {
 		if (categoriaId != null) {
 			specification = specification.and((root, query, criteriaBuilder) ->
 					criteriaBuilder.equal(root.get("categoria").get("id"), categoriaId));
+		}
+
+		if (StringUtils.hasText(termo)) {
+			String termoNormalizado = "%" + termo.trim().toLowerCase() + "%";
+			specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.or(
+					criteriaBuilder.like(criteriaBuilder.lower(root.get("titulo")), termoNormalizado),
+					criteriaBuilder.like(criteriaBuilder.lower(root.get("descricao")), termoNormalizado),
+					criteriaBuilder.like(criteriaBuilder.lower(root.get("cidade")), termoNormalizado),
+					criteriaBuilder.like(criteriaBuilder.lower(root.get("bairro")), termoNormalizado),
+					criteriaBuilder.like(criteriaBuilder.lower(root.get("rua")), termoNormalizado),
+					criteriaBuilder.like(criteriaBuilder.lower(root.get("pontoReferencia")), termoNormalizado),
+					criteriaBuilder.like(criteriaBuilder.lower(root.get("categoria").get("nome")), termoNormalizado)
+			));
 		}
 
 		return specification;

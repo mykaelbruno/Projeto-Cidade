@@ -41,7 +41,7 @@ public interface OperacionalDenunciaControllerOpenApi {
 			description = """
 			Quando a organizacao e prefeitura, retorna denuncias da prefeitura e de todas as suas secretarias.
 			Quando a organizacao e secretaria, retorna apenas denuncias atribuidas a essa secretaria.
-			Permite filtrar por cidade, bairro, status e categoria para apoiar os paineis do frontend.
+			Permite filtrar por cidade, bairro, status, categoria e termo textual para apoiar os paineis do frontend.
 			"""
 	)
 	@SecurityRequirement(name = "cookieAuth")
@@ -52,6 +52,7 @@ public interface OperacionalDenunciaControllerOpenApi {
 			@Parameter(description = "Bairro da denuncia.", in = ParameterIn.QUERY) String bairro,
 			@Parameter(description = "Status atual da denuncia.", in = ParameterIn.QUERY) StatusDenuncia status,
 			@Parameter(description = "Identificador da categoria.", in = ParameterIn.QUERY) Long categoriaId,
+			@Parameter(description = "Busca textual por titulo, descricao, cidade, bairro, rua, referencia ou categoria.", in = ParameterIn.QUERY) String termo,
 			Jwt jwt,
 			Pageable pageable
 	);

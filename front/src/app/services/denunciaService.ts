@@ -64,6 +64,12 @@ export const denunciaService = {
     });
   },
 
+  removerComentario(denunciaId: number, comentarioId: number) {
+    return apiRequest<void>(`/api/denuncias/${denunciaId}/comentarios/${comentarioId}`, {
+      method: 'DELETE',
+    });
+  },
+
   listarTimeline(denunciaId: number) {
     return apiRequest<PageResponse<TimelineDenunciaResponseDTO>>(
       `/api/denuncias/${denunciaId}/timeline?page=0&size=30`,
@@ -86,6 +92,13 @@ export const denunciaService = {
 
   sinalizar(denunciaId: number, payload: SinalizacaoDenunciaRequestDTO) {
     return apiRequest(`/api/denuncias/${denunciaId}/sinalizacoes`, {
+      method: 'POST',
+      body: payload,
+    });
+  },
+
+  sinalizarComentario(denunciaId: number, comentarioId: number, payload: SinalizacaoDenunciaRequestDTO) {
+    return apiRequest(`/api/denuncias/${denunciaId}/comentarios/${comentarioId}/sinalizacoes`, {
       method: 'POST',
       body: payload,
     });

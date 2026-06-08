@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mykael.prefeitura.core.categoria.Categoria;
 import com.mykael.prefeitura.core.categoria.CategoriaRepository;
+import com.mykael.prefeitura.core.bairro.Bairro;
+import com.mykael.prefeitura.core.bairro.BairroRepository;
 import com.mykael.prefeitura.core.comentario.Comentario;
 import com.mykael.prefeitura.core.comentario.ComentarioRepository;
 import com.mykael.prefeitura.core.denuncia.Denuncia;
@@ -86,6 +88,9 @@ class FluxosPrincipaisIntegrationTest {
 	@Autowired
 	private SolicitacaoTransferenciaDenunciaRepository solicitacaoRepository;
 
+	@Autowired
+	private BairroRepository bairroRepository;
+
 	@Test
 	void deveCadastrarMoradorELogarComEmailEUsername() throws Exception {
 		int numero = SEQUENCIA.incrementAndGet();
@@ -119,11 +124,12 @@ class FluxosPrincipaisIntegrationTest {
 		Usuario morador = usuario(PerfilUsuario.MORADOR);
 		Usuario adminSecretaria = usuario(PerfilUsuario.MORADOR);
 		Organizacao prefeitura = prefeitura();
+		Bairro bairro = bairro(prefeitura, "Centro");
 		Organizacao secretaria = secretaria(prefeitura);
 		vinculo(adminSecretaria, secretaria, PapelUsuario.ADMIN_SECRETARIA);
 		Categoria categoria = categoria(secretaria);
 
-		Long denunciaId = criarDenunciaViaApi(morador, categoria);
+		Long denunciaId = criarDenunciaViaApi(morador, categoria, prefeitura, bairro);
 
 		mockMvc.perform(post("/api/denuncias/{denunciaId}/comentarios", denunciaId)
 						.with(jwtUsuario(morador, "MORADOR"))
@@ -409,7 +415,7 @@ class FluxosPrincipaisIntegrationTest {
 				.andExpect(jsonPath("$.usuario.username").value(usernameEsperado));
 	}
 
-	private Long criarDenunciaViaApi(Usuario morador, Categoria categoria) throws Exception {
+	private Long criarDenunciaViaApi(Usuario morador, Categoria categoria, Organizacao prefeitura, Bairro bairro) throws Exception {
 		MvcResult result = mockMvc.perform(post("/api/denuncias")
 						.with(jwtUsuario(morador, "MORADOR"))
 						.contentType(MediaType.APPLICATION_JSON)
@@ -418,6 +424,8 @@ class FluxosPrincipaisIntegrationTest {
 								  "titulo": "Buraco grande na rua",
 								  "descricao": "Existe um buraco grande na rua principal do bairro ha varios dias.",
 								  "categoriaId": %d,
+								  "prefeituraId": %d,
+								  "bairroId": %d,
 								  "anonima": false,
 								  "cidade": "Joao Pessoa",
 								  "bairro": "Centro",
@@ -426,7 +434,7 @@ class FluxosPrincipaisIntegrationTest {
 								  "latitude": -7.12,
 								  "longitude": -34.86
 								}
-								""".formatted(categoria.getId())))
+								""".formatted(categoria.getId(), prefeitura.getId(), bairro.getId())))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.status").value(StatusDenuncia.ABERTO.name()))
 				.andReturn();
@@ -480,6 +488,13 @@ class FluxosPrincipaisIntegrationTest {
 		secretaria.setOrganizacaoPai(prefeitura);
 		secretaria.setVerificada(true);
 		return organizacaoRepository.save(secretaria);
+	}
+
+	private Bairro bairro(Organizacao prefeitura, String nome) {
+		Bairro bairro = new Bairro();
+		bairro.setPrefeitura(prefeitura);
+		bairro.setNome(nome);
+		return bairroRepository.save(bairro);
 	}
 
 	private VinculoUsuarioOrganizacao vinculo(Usuario usuario, Organizacao organizacao, PapelUsuario papel) {

@@ -56,6 +56,8 @@ public class BairroService {
 		Bairro bairro = new Bairro();
 		bairro.setPrefeitura(prefeitura);
 		bairro.setNome(nome);
+		bairro.setCentroideLatitude(request.centroideLatitude());
+		bairro.setCentroideLongitude(request.centroideLongitude());
 		Bairro salvo = bairroRepository.save(bairro);
 		auditoriaService.registrar(
 				TipoAcaoAuditoria.BAIRRO_CRIADO,
@@ -73,6 +75,8 @@ public class BairroService {
 		String nome = normalizarNome(request.nome());
 		validarNomeDisponivel(bairro.getPrefeitura().getId(), nome, bairro.getId());
 		bairro.setNome(nome);
+		bairro.setCentroideLatitude(request.centroideLatitude());
+		bairro.setCentroideLongitude(request.centroideLongitude());
 		auditoriaService.registrar(
 				TipoAcaoAuditoria.BAIRRO_ATUALIZADO,
 				TipoAlvoAuditoria.BAIRRO,

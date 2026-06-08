@@ -29,6 +29,8 @@ export interface SinalizacaoDenunciaResponseDTO {
   id: number;
   denunciaId: number;
   denunciaTitulo: string;
+  comentarioId: number | null;
+  comentarioSinalizadoConteudo: string | null;
   autorId: number;
   autorNome: string;
   motivo: MotivoSinalizacaoDenuncia;

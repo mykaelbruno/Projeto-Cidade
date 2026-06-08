@@ -23,6 +23,7 @@ import com.mykael.prefeitura.core.vinculo.VinculoUsuarioOrganizacao;
 import com.mykael.prefeitura.core.vinculo.VinculoUsuarioOrganizacaoRepository;
 import com.mykael.prefeitura.infra.auditoria.AuditoriaRepository;
 import com.mykael.prefeitura.infra.auditoria.TipoAcaoAuditoria;
+import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -62,10 +64,31 @@ class PermissaoPorPerfilIntegrationTest {
 	@Autowired
 	private AuditoriaRepository auditoriaRepository;
 
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+
 	@Test
 	void deveExigirAutenticacaoParaRotaProtegida() throws Exception {
 		mockMvc.perform(get("/api/usuarios"))
 				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void devePermitirLoginMesmoComCookieJwtInvalido() throws Exception {
+		Usuario usuario = usuario(PerfilUsuario.MORADOR);
+		usuario.setSenhaHash(passwordEncoder.encode("senha-segura"));
+		usuarioRepository.save(usuario);
+
+		mockMvc.perform(post("/api/auth/login")
+						.cookie(new Cookie("access_token", "jwt-invalido"))
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "identificador": "%s",
+								  "senha": "senha-segura"
+								}
+								""".formatted(usuario.getUsername())))
+				.andExpect(status().isOk());
 	}
 
 	@Test

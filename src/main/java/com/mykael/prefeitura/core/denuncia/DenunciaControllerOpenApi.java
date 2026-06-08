@@ -36,7 +36,13 @@ import org.springframework.security.oauth2.jwt.Jwt;
 })
 public interface DenunciaControllerOpenApi {
 
-	@Operation(summary = "Cria denuncia", description = "Permite que um morador autenticado registre uma denuncia urbana.")
+	@Operation(
+			summary = "Cria denuncia",
+			description = """
+					Permite que um morador autenticado registre uma denuncia urbana apenas na propria cidade.
+					Quando prefeituraId e bairroId forem enviados, o backend valida se a prefeitura pertence a cidade do morador e se o bairro esta ativo nessa prefeitura.
+					"""
+	)
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "201", description = "Denuncia criada.")
 	ResponseEntity<DenunciaResponseDTO> criar(
@@ -52,6 +58,7 @@ public interface DenunciaControllerOpenApi {
 					Permite que um morador autenticado consulte possiveis denuncias parecidas antes de criar uma nova.
 					A consulta nao bloqueia a criacao: ela serve para o frontend sugerir apoio a uma denuncia ativa existente.
 					Usa criterios conservadores de mesma categoria, mesma cidade/bairro, status ativo, proximidade por coordenada quando houver e texto/rua parecidos.
+					O frontend deve enviar a cidade do morador e, quando disponivel, prefeituraId/bairroId para manter a mesma validacao da criacao.
 					"""
 	)
 	@SecurityRequirement(name = "cookieAuth")
@@ -59,7 +66,8 @@ public interface DenunciaControllerOpenApi {
 	List<DenunciaSemelhanteResponseDTO> buscarSemelhantes(
 			@Valid
 			@RequestBody(content = @Content(schema = @Schema(implementation = DenunciaCreateRequestDTO.class), examples = @ExampleObject(value = OpenApiExemplos.DENUNCIA_SEMELHANTE)))
-			DenunciaCreateRequestDTO request
+			DenunciaCreateRequestDTO request,
+			@Parameter(hidden = true) Jwt jwt
 	);
 
 	@Operation(

@@ -135,15 +135,29 @@ export function UserProvider({ children }: UserProviderProps) {
     });
   }, []);
 
+  const carregarSessao = useCallback(async () => {
+    const currentSession = await authService.me();
+    applySession(currentSession);
+    return currentSession;
+  }, [applySession]);
+
   const refreshSession = useCallback(async () => {
     try {
-      const currentSession = await authService.me();
-      applySession(currentSession);
-      return currentSession;
+      return await carregarSessao();
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        applySession(null);
-        return null;
+        try {
+          await authService.refresh();
+          return await carregarSessao();
+        } catch (refreshError) {
+          if (refreshError instanceof ApiError && refreshError.status === 401) {
+            applySession(null);
+            return null;
+          }
+
+          setSessionError('Nao foi possivel renovar sua sessao.');
+          throw refreshError;
+        }
       }
 
       setSessionError('Nao foi possivel carregar sua sessao.');
@@ -151,7 +165,7 @@ export function UserProvider({ children }: UserProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [applySession]);
+  }, [applySession, carregarSessao]);
 
   useEffect(() => {
     refreshSession().catch(() => {

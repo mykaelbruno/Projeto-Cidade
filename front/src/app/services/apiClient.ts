@@ -8,7 +8,21 @@ export function getApiUrl(path: string): string {
     return path;
   }
 
-  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  if (!API_BASE_URL) {
+    return normalizedPath;
+  }
+
+  if (API_BASE_URL.endsWith('/api') && normalizedPath === '/api') {
+    return API_BASE_URL;
+  }
+
+  if (API_BASE_URL.endsWith('/api') && normalizedPath.startsWith('/api/')) {
+    return `${API_BASE_URL}${normalizedPath.slice('/api'.length)}`;
+  }
+
+  return `${API_BASE_URL}${normalizedPath}`;
 }
 
 export class ApiError extends Error {

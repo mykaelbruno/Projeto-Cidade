@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.mykael.prefeitura.core.categoria.Categoria;
 import com.mykael.prefeitura.core.categoria.CategoriaRepository;
+import com.mykael.prefeitura.core.bairro.Bairro;
+import com.mykael.prefeitura.core.bairro.BairroRepository;
 import com.mykael.prefeitura.core.comentario.Comentario;
 import com.mykael.prefeitura.core.comentario.ComentarioRepository;
 import com.mykael.prefeitura.core.organizacao.Organizacao;
@@ -60,6 +62,9 @@ class DenunciaListagemIntegrationTest {
 
 	@Autowired
 	private ComentarioRepository comentarioRepository;
+
+	@Autowired
+	private BairroRepository bairroRepository;
 
 	@Test
 	void deveListarApenasDenunciasDoMoradorAutenticado() throws Exception {
@@ -177,6 +182,8 @@ class DenunciaListagemIntegrationTest {
 	void deveSugerirDenunciaSemelhanteAtivaEProxima() throws Exception {
 		Usuario autor = usuario(PerfilUsuario.MORADOR);
 		Usuario leitor = usuario(PerfilUsuario.MORADOR);
+		Organizacao prefeitura = prefeitura();
+		Bairro bairro = bairro(prefeitura, "Centro");
 		Categoria categoria = categoria();
 		Denuncia existente = denuncia(autor, categoria, null, StatusDenuncia.ABERTO, "Centro");
 		existente.setTitulo("Buraco grande perto da praca");
@@ -193,6 +200,8 @@ class DenunciaListagemIntegrationTest {
 								  "titulo": "Buraco grande na Rua Principal",
 								  "descricao": "O buraco na rua principal continua causando risco para pedestres e motoristas.",
 								  "categoriaId": %d,
+								  "prefeituraId": %d,
+								  "bairroId": %d,
 								  "anonima": false,
 								  "cidade": "Joao Pessoa",
 								  "bairro": "Centro",
@@ -201,7 +210,7 @@ class DenunciaListagemIntegrationTest {
 								  "latitude": -7.1203,
 								  "longitude": -34.8602
 								}
-								""".formatted(categoria.getId()))
+								""".formatted(categoria.getId(), prefeitura.getId(), bairro.getId()))
 						.with(jwtUsuario(leitor, "MORADOR")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(1)))
@@ -214,6 +223,8 @@ class DenunciaListagemIntegrationTest {
 	void naoDeveSugerirDenunciaArquivadaOuConcluidaComoSemelhante() throws Exception {
 		Usuario autor = usuario(PerfilUsuario.MORADOR);
 		Usuario leitor = usuario(PerfilUsuario.MORADOR);
+		Organizacao prefeitura = prefeitura();
+		Bairro bairro = bairro(prefeitura, "Centro Duplicidade");
 		Categoria categoria = categoria();
 		Denuncia arquivada = denuncia(autor, categoria, null, StatusDenuncia.ARQUIVADO, "Centro Duplicidade");
 		arquivada.setTitulo("Buraco grande perto da escola");
@@ -238,6 +249,8 @@ class DenunciaListagemIntegrationTest {
 								  "titulo": "Buraco grande perto da escola",
 								  "descricao": "O mesmo buraco perto da escola municipal ainda esta aberto.",
 								  "categoriaId": %d,
+								  "prefeituraId": %d,
+								  "bairroId": %d,
 								  "anonima": false,
 								  "cidade": "Joao Pessoa",
 								  "bairro": "Centro Duplicidade",
@@ -246,7 +259,7 @@ class DenunciaListagemIntegrationTest {
 								  "latitude": -7.1302,
 								  "longitude": -34.8702
 								}
-								""".formatted(categoria.getId()))
+								""".formatted(categoria.getId(), prefeitura.getId(), bairro.getId()))
 						.with(jwtUsuario(leitor, "MORADOR")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(0)));
@@ -294,6 +307,13 @@ class DenunciaListagemIntegrationTest {
 		secretaria.setOrganizacaoPai(prefeitura);
 		secretaria.setVerificada(true);
 		return organizacaoRepository.save(secretaria);
+	}
+
+	private Bairro bairro(Organizacao prefeitura, String nome) {
+		Bairro bairro = new Bairro();
+		bairro.setPrefeitura(prefeitura);
+		bairro.setNome(nome);
+		return bairroRepository.save(bairro);
 	}
 
 	private VinculoUsuarioOrganizacao vinculo(Usuario usuario, Organizacao organizacao, PapelUsuario papel) {

@@ -10,6 +10,8 @@ public record BairroResponseDTO(
 		String cidade,
 		String estado,
 		String nome,
+		Double centroideLatitude,
+		Double centroideLongitude,
 		boolean ativo,
 		Instant criadoEm,
 		Instant atualizadoEm
@@ -23,6 +25,8 @@ public record BairroResponseDTO(
 				bairro.getPrefeitura().getCidade(),
 				bairro.getPrefeitura().getEstado(),
 				bairro.getNome(),
+				bairro.getCentroideLatitude(),
+				bairro.getCentroideLongitude(),
 				bairro.isAtivo(),
 				bairro.getCriadoEm(),
 				bairro.getAtualizadoEm()

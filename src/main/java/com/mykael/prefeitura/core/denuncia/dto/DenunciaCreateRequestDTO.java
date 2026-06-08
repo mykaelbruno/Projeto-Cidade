@@ -16,6 +16,10 @@ public record DenunciaCreateRequestDTO(
 		@NotNull
 		Long categoriaId,
 
+		Long prefeituraId,
+
+		Long bairroId,
+
 		boolean anonima,
 
 		@NotBlank

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import { Suspense, lazy } from 'react';
 import { UserProvider } from './contexts/UserContext';
 import { RouteGuard } from './components/RouteGuard';
 import { MainLayout } from './layouts/MainLayout';
@@ -6,47 +7,57 @@ import { AdminLayout } from './layouts/AdminLayout';
 import { SecretariaLayout } from './layouts/SecretariaLayout';
 import { AdminAppLayout } from './layouts/AdminAppLayout';
 import { ModeradorLayout } from './layouts/ModeradorLayout';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { VerifyEmailPage } from './pages/VerifyEmailPage';
-import { HomePage } from './pages/HomePage';
-import { MapPage } from './pages/MapPage';
-import { NewReportPage } from './pages/NewReportPage';
-import { MyReportsPage } from './pages/MyReportsPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { ReportDetailPage } from './pages/ReportDetailPage';
-import { DashboardPage } from './pages/admin/DashboardPage';
-import { RelatosPage } from './pages/admin/RelatosPage';
-import { AdministracaoPage } from './pages/admin/AdministracaoPage';
-import { BairrosPage } from './pages/admin/BairrosPage';
-import { AdminProfilePage } from './pages/admin/AdminProfilePage';
-import { DashboardSecretariaPage } from './pages/secretaria/DashboardSecretariaPage';
-import { RelatosSecretariaPage } from './pages/secretaria/RelatosSecretariaPage';
-import { PerfilSecretariaPage } from './pages/secretaria/PerfilSecretariaPage';
-import { UsuariosSecretariaPage } from './pages/secretaria/UsuariosSecretariaPage';
-import { VisaoGeralPage } from './pages/adminapp/VisaoGeralPage';
-import { OrganizacoesPage } from './pages/adminapp/OrganizacoesPage';
-import { UsuariosPage } from './pages/adminapp/UsuariosPage';
-import { VinculosPage } from './pages/adminapp/VinculosPage';
-import { CategoriasPage } from './pages/adminapp/CategoriasPage';
-import { ModeracaoPage } from './pages/adminapp/ModeracaoPage';
-import { AuditoriaPage } from './pages/adminapp/AuditoriaPage';
-import { ModeradorPage } from './pages/moderador/ModeradorPage';
-import { NotFoundPage } from './pages/NotFoundPage';
+
+const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/RegisterPage').then((module) => ({ default: module.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage').then((module) => ({ default: module.VerifyEmailPage })));
+const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
+const MapPage = lazy(() => import('./pages/MapPage').then((module) => ({ default: module.MapPage })));
+const NewReportPage = lazy(() => import('./pages/NewReportPage').then((module) => ({ default: module.NewReportPage })));
+const MyReportsPage = lazy(() => import('./pages/MyReportsPage').then((module) => ({ default: module.MyReportsPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((module) => ({ default: module.ProfilePage })));
+const ReportDetailPage = lazy(() => import('./pages/ReportDetailPage').then((module) => ({ default: module.ReportDetailPage })));
+const DashboardPage = lazy(() => import('./pages/admin/DashboardPage').then((module) => ({ default: module.DashboardPage })));
+const RelatosPage = lazy(() => import('./pages/admin/RelatosPage').then((module) => ({ default: module.RelatosPage })));
+const AdministracaoPage = lazy(() => import('./pages/admin/AdministracaoPage').then((module) => ({ default: module.AdministracaoPage })));
+const BairrosPage = lazy(() => import('./pages/admin/BairrosPage').then((module) => ({ default: module.BairrosPage })));
+const AdminProfilePage = lazy(() => import('./pages/admin/AdminProfilePage').then((module) => ({ default: module.AdminProfilePage })));
+const DashboardSecretariaPage = lazy(() => import('./pages/secretaria/DashboardSecretariaPage').then((module) => ({ default: module.DashboardSecretariaPage })));
+const RelatosSecretariaPage = lazy(() => import('./pages/secretaria/RelatosSecretariaPage').then((module) => ({ default: module.RelatosSecretariaPage })));
+const PerfilSecretariaPage = lazy(() => import('./pages/secretaria/PerfilSecretariaPage').then((module) => ({ default: module.PerfilSecretariaPage })));
+const UsuariosSecretariaPage = lazy(() => import('./pages/secretaria/UsuariosSecretariaPage').then((module) => ({ default: module.UsuariosSecretariaPage })));
+const VisaoGeralPage = lazy(() => import('./pages/adminapp/VisaoGeralPage').then((module) => ({ default: module.VisaoGeralPage })));
+const OrganizacoesPage = lazy(() => import('./pages/adminapp/OrganizacoesPage').then((module) => ({ default: module.OrganizacoesPage })));
+const UsuariosPage = lazy(() => import('./pages/adminapp/UsuariosPage').then((module) => ({ default: module.UsuariosPage })));
+const VinculosPage = lazy(() => import('./pages/adminapp/VinculosPage').then((module) => ({ default: module.VinculosPage })));
+const CategoriasPage = lazy(() => import('./pages/adminapp/CategoriasPage').then((module) => ({ default: module.CategoriasPage })));
+const ModeracaoPage = lazy(() => import('./pages/adminapp/ModeracaoPage').then((module) => ({ default: module.ModeracaoPage })));
+const AuditoriaPage = lazy(() => import('./pages/adminapp/AuditoriaPage').then((module) => ({ default: module.AuditoriaPage })));
+const ModeradorPage = lazy(() => import('./pages/moderador/ModeradorPage').then((module) => ({ default: module.ModeradorPage })));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })));
+
+function PageLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background text-sm text-muted-foreground">
+      Carregando...
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <UserProvider>
       <BrowserRouter>
-      <Routes>
-        {/* Auth pages - standalone */}
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/cadastro" element={<RegisterPage />} />
-        <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
-        <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
-        <Route path="/verificar-email" element={<VerifyEmailPage />} />
+        <Suspense fallback={<PageLoadingFallback />}>
+          <Routes>
+            {/* Auth pages - standalone */}
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/cadastro" element={<RegisterPage />} />
+            <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
+            <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
+            <Route path="/verificar-email" element={<VerifyEmailPage />} />
 
         {/* Main app routes with layout - Morador only */}
         <Route element={<MainLayout />}>
@@ -214,8 +225,9 @@ export default function App() {
 
         {/* 404 - Not Found */}
         <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </BrowserRouter>
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
     </UserProvider>
   );
 }

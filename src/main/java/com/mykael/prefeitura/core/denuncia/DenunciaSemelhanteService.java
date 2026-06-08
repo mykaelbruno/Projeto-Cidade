@@ -2,8 +2,15 @@ package com.mykael.prefeitura.core.denuncia;
 
 import com.mykael.prefeitura.core.categoria.Categoria;
 import com.mykael.prefeitura.core.categoria.CategoriaRepository;
+import com.mykael.prefeitura.core.bairro.Bairro;
+import com.mykael.prefeitura.core.bairro.BairroRepository;
 import com.mykael.prefeitura.core.denuncia.dto.DenunciaCreateRequestDTO;
 import com.mykael.prefeitura.core.denuncia.dto.DenunciaSemelhanteResponseDTO;
+import com.mykael.prefeitura.core.organizacao.Organizacao;
+import com.mykael.prefeitura.core.organizacao.OrganizacaoRepository;
+import com.mykael.prefeitura.core.organizacao.TipoOrganizacao;
+import com.mykael.prefeitura.core.usuario.Usuario;
+import com.mykael.prefeitura.core.usuario.UsuarioRepository;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,26 +37,36 @@ public class DenunciaSemelhanteService {
 
 	private final DenunciaRepository denunciaRepository;
 	private final CategoriaRepository categoriaRepository;
+	private final UsuarioRepository usuarioRepository;
+	private final OrganizacaoRepository organizacaoRepository;
+	private final BairroRepository bairroRepository;
 
 	public DenunciaSemelhanteService(
 			DenunciaRepository denunciaRepository,
-			CategoriaRepository categoriaRepository
+			CategoriaRepository categoriaRepository,
+			UsuarioRepository usuarioRepository,
+			OrganizacaoRepository organizacaoRepository,
+			BairroRepository bairroRepository
 	) {
 		this.denunciaRepository = denunciaRepository;
 		this.categoriaRepository = categoriaRepository;
+		this.usuarioRepository = usuarioRepository;
+		this.organizacaoRepository = organizacaoRepository;
+		this.bairroRepository = bairroRepository;
 	}
 
 	@Transactional(readOnly = true)
-	public List<DenunciaSemelhanteResponseDTO> buscarSemelhantes(DenunciaCreateRequestDTO request) {
+	public List<DenunciaSemelhanteResponseDTO> buscarSemelhantes(DenunciaCreateRequestDTO request, Long autorId) {
 		validarCoordenadas(request.latitude(), request.longitude());
 		Categoria categoria = categoriaRepository.findById(request.categoriaId())
 				.filter(Categoria::isAtiva)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoria ativa nao encontrada."));
+		LocalizacaoBusca localizacao = validarLocalizacaoDaBusca(request, autorId);
 
 		List<Denuncia> candidatas = denunciaRepository.findCandidatasSemelhantes(
 				categoria.getId(),
-				request.cidade().trim(),
-				request.bairro().trim(),
+				localizacao.cidade(),
+				localizacao.bairro(),
 				statusesAtivos(),
 				PageRequest.of(0, LIMITE_CANDIDATAS)
 		);
@@ -214,5 +231,50 @@ public class DenunciaSemelhanteService {
 		if (longitude != null && (longitude < -180 || longitude > 180)) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Longitude invalida.");
 		}
+	}
+
+	private LocalizacaoBusca validarLocalizacaoDaBusca(DenunciaCreateRequestDTO request, Long autorId) {
+		Usuario autor = usuarioRepository.findById(autorId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario autenticado nao encontrado."));
+		if (!StringUtils.hasText(autor.getCidade())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Usuario nao possui cidade cadastrada.");
+		}
+
+		String cidadeUsuario = autor.getCidade().trim();
+		Organizacao prefeitura;
+		if (request.prefeituraId() != null) {
+			prefeitura = organizacaoRepository.findById(request.prefeituraId())
+					.filter(Organizacao::isAtiva)
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prefeitura ativa nao encontrada."));
+			if (prefeitura.getTipo() != TipoOrganizacao.PREFEITURA) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Organizacao informada nao e uma prefeitura.");
+			}
+			if (!prefeitura.getCidade().equalsIgnoreCase(cidadeUsuario)) {
+				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Morador so pode buscar denuncias semelhantes da propria cidade.");
+			}
+		} else {
+			if (!StringUtils.hasText(request.cidade()) || !request.cidade().trim().equalsIgnoreCase(cidadeUsuario)) {
+				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Morador so pode buscar denuncias semelhantes da propria cidade.");
+			}
+			prefeitura = organizacaoRepository.findByTipoAndAtivaTrue(TipoOrganizacao.PREFEITURA)
+					.stream()
+					.filter(item -> item.getCidade().equalsIgnoreCase(cidadeUsuario))
+					.findFirst()
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prefeitura ativa da cidade do morador nao encontrada."));
+		}
+
+		Bairro bairro;
+		if (request.bairroId() != null) {
+			bairro = bairroRepository.findByIdAndPrefeituraIdAndAtivoTrue(request.bairroId(), prefeitura.getId())
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bairro ativo nao encontrado nesta prefeitura."));
+		} else {
+			bairro = bairroRepository.findByPrefeituraIdAndNomeIgnoreCaseAndAtivoTrue(prefeitura.getId(), request.bairro().trim())
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bairro ativo nao encontrado nesta prefeitura."));
+		}
+
+		return new LocalizacaoBusca(prefeitura.getCidade(), bairro.getNome());
+	}
+
+	private record LocalizacaoBusca(String cidade, String bairro) {
 	}
 }

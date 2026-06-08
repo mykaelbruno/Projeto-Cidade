@@ -22,6 +22,8 @@ export interface DenunciaResponseDTO {
   anonima: boolean;
   cidade: string;
   bairro: string;
+  prefeituraId: number | null;
+  bairroId: number | null;
   rua: string | null;
   pontoReferencia: string | null;
   latitude: number | null;
@@ -65,6 +67,8 @@ export interface DenunciaCreateRequestDTO {
   titulo: string;
   descricao: string;
   categoriaId: number;
+  prefeituraId?: number | null;
+  bairroId?: number | null;
   anonima: boolean;
   cidade: string;
   bairro: string;

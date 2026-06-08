@@ -16,7 +16,11 @@ import com.mykael.prefeitura.core.vinculo.VinculoUsuarioOrganizacao;
 import com.mykael.prefeitura.core.vinculo.PapelUsuario;
 import com.mykael.prefeitura.core.usuario.PerfilUsuario;
 import com.mykael.prefeitura.infra.antispam.AntispamService;
+import com.mykael.prefeitura.infra.auditoria.AuditoriaService;
+import com.mykael.prefeitura.infra.auditoria.TipoAcaoAuditoria;
+import com.mykael.prefeitura.infra.auditoria.TipoAlvoAuditoria;
 import com.mykael.prefeitura.infra.security.UsuarioAutenticado;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +40,7 @@ public class ComentarioService {
 	private final TimelineDenunciaService timelineDenunciaService;
 	private final AntispamService antispamService;
 	private final VisibilidadeDenunciaService visibilidadeDenunciaService;
+	private final AuditoriaService auditoriaService;
 
 	public ComentarioService(
 			ComentarioRepository comentarioRepository,
@@ -45,7 +50,8 @@ public class ComentarioService {
 			VinculoUsuarioOrganizacaoRepository vinculoRepository,
 			TimelineDenunciaService timelineDenunciaService,
 			AntispamService antispamService,
-			VisibilidadeDenunciaService visibilidadeDenunciaService
+			VisibilidadeDenunciaService visibilidadeDenunciaService,
+			AuditoriaService auditoriaService
 	) {
 		this.comentarioRepository = comentarioRepository;
 		this.denunciaRepository = denunciaRepository;
@@ -55,6 +61,7 @@ public class ComentarioService {
 		this.timelineDenunciaService = timelineDenunciaService;
 		this.antispamService = antispamService;
 		this.visibilidadeDenunciaService = visibilidadeDenunciaService;
+		this.auditoriaService = auditoriaService;
 	}
 
 	@Transactional
@@ -138,6 +145,31 @@ public class ComentarioService {
 						comentario,
 						!comentario.isOficial() && visibilidadeDenunciaService.deveOcultarAutorMorador(denuncia, comentario.getAutor().getId())
 				));
+	}
+
+	@Transactional
+	public void removerProprioComentario(Long denunciaId, Long comentarioId, Long usuarioId) {
+		Comentario comentario = comentarioRepository.findById(comentarioId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comentario nao encontrado."));
+		if (!comentario.getDenuncia().getId().equals(denunciaId)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comentario nao pertence a denuncia informada.");
+		}
+		if (!comentario.getAutor().getId().equals(usuarioId)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Apenas o autor do comentario pode remove-lo.");
+		}
+		if (comentario.getRemovidoEm() != null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "Comentario ja foi removido.");
+		}
+
+		comentario.setRemovidoEm(Instant.now());
+		comentario.getDenuncia().decrementarComentarios();
+		auditoriaService.registrar(
+				TipoAcaoAuditoria.COMENTARIO_REMOVIDO_AUTOR,
+				TipoAlvoAuditoria.COMENTARIO,
+				comentario.getId(),
+				"Comentario removido pelo proprio autor.",
+				"Denuncia id: " + comentario.getDenuncia().getId()
+		);
 	}
 
 	private Denuncia buscarDenuncia(Long denunciaId) {

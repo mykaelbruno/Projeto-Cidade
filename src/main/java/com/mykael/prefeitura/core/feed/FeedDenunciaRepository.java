@@ -17,7 +17,7 @@ public interface FeedDenunciaRepository extends Repository<Denuncia, Long> {
 			and (:bairro is null or lower(d.bairro) = :bairro)
 			and (:status is null or d.status = :status)
 			and (:status is not null or d.status <> :statusArquivado)
-			and (:status is not null or d.conclusaoConfirmadaEm is null)
+			and (:status is not null or d.status <> :statusConcluido)
 			and (:categoriaId is null or d.categoria.id = :categoriaId)
 			and (:autorExcluidoId is null or d.autor.id <> :autorExcluidoId)
 			and (:termo is null or (
@@ -36,7 +36,7 @@ public interface FeedDenunciaRepository extends Repository<Denuncia, Long> {
 			and (:bairro is null or lower(d.bairro) = :bairro)
 			and (:status is null or d.status = :status)
 			and (:status is not null or d.status <> :statusArquivado)
-			and (:status is not null or d.conclusaoConfirmadaEm is null)
+			and (:status is not null or d.status <> :statusConcluido)
 			and (:categoriaId is null or d.categoria.id = :categoriaId)
 			and (:autorExcluidoId is null or d.autor.id <> :autorExcluidoId)
 			and (:termo is null or (
@@ -54,6 +54,7 @@ public interface FeedDenunciaRepository extends Repository<Denuncia, Long> {
 			@Param("bairro") String bairro,
 			@Param("status") StatusDenuncia status,
 			@Param("statusArquivado") StatusDenuncia statusArquivado,
+			@Param("statusConcluido") StatusDenuncia statusConcluido,
 			@Param("categoriaId") Long categoriaId,
 			@Param("autorExcluidoId") Long autorExcluidoId,
 			@Param("termo") String termo,
@@ -66,7 +67,7 @@ public interface FeedDenunciaRepository extends Repository<Denuncia, Long> {
 			and (:bairro is null or lower(d.bairro) = :bairro)
 			and (:status is null or d.status = :status)
 			and (:status is not null or d.status <> :statusArquivado)
-			and (:status is not null or d.conclusaoConfirmadaEm is null)
+			and (:status is not null or d.status <> :statusConcluido)
 			and (:categoriaId is null or d.categoria.id = :categoriaId)
 			and (:autorExcluidoId is null or d.autor.id <> :autorExcluidoId)
 			and (:termo is null or (
@@ -85,7 +86,7 @@ public interface FeedDenunciaRepository extends Repository<Denuncia, Long> {
 			and (:bairro is null or lower(d.bairro) = :bairro)
 			and (:status is null or d.status = :status)
 			and (:status is not null or d.status <> :statusArquivado)
-			and (:status is not null or d.conclusaoConfirmadaEm is null)
+			and (:status is not null or d.status <> :statusConcluido)
 			and (:categoriaId is null or d.categoria.id = :categoriaId)
 			and (:autorExcluidoId is null or d.autor.id <> :autorExcluidoId)
 			and (:termo is null or (
@@ -103,6 +104,7 @@ public interface FeedDenunciaRepository extends Repository<Denuncia, Long> {
 			@Param("bairro") String bairro,
 			@Param("status") StatusDenuncia status,
 			@Param("statusArquivado") StatusDenuncia statusArquivado,
+			@Param("statusConcluido") StatusDenuncia statusConcluido,
 			@Param("categoriaId") Long categoriaId,
 			@Param("autorExcluidoId") Long autorExcluidoId,
 			@Param("termo") String termo,
@@ -115,7 +117,7 @@ public interface FeedDenunciaRepository extends Repository<Denuncia, Long> {
 			and (:bairro is null or lower(d.bairro) = :bairro)
 			and (:status is null or d.status = :status)
 			and (:status is not null or d.status <> :statusArquivado)
-			and (:status is not null or d.conclusaoConfirmadaEm is null)
+			and (:status is not null or d.status <> :statusConcluido)
 			and (:categoriaId is null or d.categoria.id = :categoriaId)
 			and (:autorExcluidoId is null or d.autor.id <> :autorExcluidoId)
 			and (:termo is null or (
@@ -144,7 +146,7 @@ public interface FeedDenunciaRepository extends Repository<Denuncia, Long> {
 			and (:bairro is null or lower(d.bairro) = :bairro)
 			and (:status is null or d.status = :status)
 			and (:status is not null or d.status <> :statusArquivado)
-			and (:status is not null or d.conclusaoConfirmadaEm is null)
+			and (:status is not null or d.status <> :statusConcluido)
 			and (:categoriaId is null or d.categoria.id = :categoriaId)
 			and (:autorExcluidoId is null or d.autor.id <> :autorExcluidoId)
 			and (:termo is null or (
@@ -162,6 +164,7 @@ public interface FeedDenunciaRepository extends Repository<Denuncia, Long> {
 			@Param("bairro") String bairro,
 			@Param("status") StatusDenuncia status,
 			@Param("statusArquivado") StatusDenuncia statusArquivado,
+			@Param("statusConcluido") StatusDenuncia statusConcluido,
 			@Param("categoriaId") Long categoriaId,
 			@Param("autorExcluidoId") Long autorExcluidoId,
 			@Param("termo") String termo,

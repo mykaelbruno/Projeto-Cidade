@@ -109,6 +109,7 @@ export function ModeradorPage() {
       return (
         String(sinalizacao.denunciaId).includes(termo) ||
         sinalizacao.denunciaTitulo.toLowerCase().includes(termo) ||
+        sinalizacao.comentarioSinalizadoConteudo?.toLowerCase().includes(termo) ||
         sinalizacao.autorNome.toLowerCase().includes(termo) ||
         motivoLabels[sinalizacao.motivo].toLowerCase().includes(termo)
       );
@@ -321,6 +322,11 @@ export function ModeradorPage() {
                       <span className="text-xs text-muted-foreground">
                         Denuncia #{sinalizacao.denunciaId}
                       </span>
+                      {sinalizacao.comentarioId && (
+                        <span className="text-xs text-muted-foreground">
+                          Comentario #{sinalizacao.comentarioId}
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">
                         {formatDateTime(sinalizacao.criadoEm)}
                       </span>
@@ -328,6 +334,12 @@ export function ModeradorPage() {
                     <h3 className="font-semibold text-foreground line-clamp-1">
                       {sinalizacao.denunciaTitulo}
                     </h3>
+                    {sinalizacao.comentarioSinalizadoConteudo && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                        <p className="text-xs font-medium text-amber-800">Comentario sinalizado</p>
+                        <p className="text-sm text-amber-900 line-clamp-2">{sinalizacao.comentarioSinalizadoConteudo}</p>
+                      </div>
+                    )}
                     <p className="text-sm text-muted-foreground line-clamp-2">{sinalizacao.comentario}</p>
                     <p className="text-xs text-muted-foreground">Reportado por: {sinalizacao.autorNome}</p>
                   </div>

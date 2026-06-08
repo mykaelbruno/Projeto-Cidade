@@ -1,5 +1,6 @@
 package com.mykael.prefeitura.core.sinalizacao;
 
+import com.mykael.prefeitura.core.comentario.Comentario;
 import com.mykael.prefeitura.core.denuncia.Denuncia;
 import com.mykael.prefeitura.core.usuario.Usuario;
 import jakarta.persistence.Column;
@@ -26,6 +27,10 @@ public class SinalizacaoDenuncia {
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "denuncia_id", nullable = false)
 	private Denuncia denuncia;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "comentario_id")
+	private Comentario comentarioSinalizado;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "autor_id", nullable = false)
@@ -62,6 +67,14 @@ public class SinalizacaoDenuncia {
 
 	public void setDenuncia(Denuncia denuncia) {
 		this.denuncia = denuncia;
+	}
+
+	public Comentario getComentarioSinalizado() {
+		return comentarioSinalizado;
+	}
+
+	public void setComentarioSinalizado(Comentario comentarioSinalizado) {
+		this.comentarioSinalizado = comentarioSinalizado;
 	}
 
 	public Usuario getAutor() {

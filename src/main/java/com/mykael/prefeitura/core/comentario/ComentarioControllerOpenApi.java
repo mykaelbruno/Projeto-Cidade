@@ -66,4 +66,16 @@ public interface ComentarioControllerOpenApi {
 			@Parameter(hidden = true) Jwt jwt,
 			Pageable pageable
 	);
+
+	@Operation(
+			summary = "Remove proprio comentario",
+			description = "Permite que o autor remova logicamente seu proprio comentario. O comentario deixa de aparecer na listagem."
+	)
+	@SecurityRequirement(name = "cookieAuth")
+	@ApiResponse(responseCode = "204", description = "Comentario removido pelo autor.")
+	ResponseEntity<Void> removerProprioComentario(
+			@Parameter(description = "Identificador da denuncia.", in = ParameterIn.PATH) Long denunciaId,
+			@Parameter(description = "Identificador do comentario.", in = ParameterIn.PATH) Long comentarioId,
+			@Parameter(hidden = true) Jwt jwt
+	);
 }

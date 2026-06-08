@@ -25,21 +25,21 @@ Estas decisoes foram respondidas pelo dono do produto e devem guiar a integracao
 | Transferir usuario entre secretarias | A prefeitura deve conseguir trocar um usuario de uma secretaria para outra. | Backend precisa de fluxo de movimentacao/criacao de vinculo para usuario institucional existente dentro do escopo da prefeitura. |
 | Analytics | Analytics detalhado nao e necessario agora. | Remover/ocultar telas/cards de analytics que dependam de comparativos, tendencias ou filtros por periodo nao implementados. |
 | Foto de capa/performance | A listagem deve buscar performance. | Implementado `imagemCapaUrl` em `DenunciaResponseDTO` para evitar N+1 de anexos nos cards do feed, mapa e minhas denuncias. |
-| Denuncias concluidas | Denuncias concluidas devem ser exibidas, mas a regra final de negocio sera estudada depois. | Nao ocultar concluidas por padrao sem decisao futura. |
+| Denuncias concluidas | Denuncias concluidas nao aparecem no feed inicial; ficam acessiveis apenas quando o usuario entra em "Concluidas" ou filtra explicitamente por status. | Feed sem `status` agora exclui `CONCLUIDO`; a aba/rota de concluidas continua usando filtro de status. |
 
 ## Estado Atual do Front
 
 | Area | Estado atual | Impacto |
 |---|---|---|
-| Autenticacao | `LoginPage.tsx` usa seletor manual de perfil e `setTimeout`; nao chama API. | Precisa substituir por login real com cookie HttpOnly. |
-| Sessao/perfil | `UserContext.tsx` guarda apenas `userType` local: `morador`, `secretaria`, `prefeitura`, `admin_app`, `moderador`. | Precisa guardar usuario real, perfil global, papeis e vinculos operacionais vindos de `/api/auth/me`. |
-| Dados de denuncias | Feed, detalhe, minhas denuncias e mapa ja usam backend real. | O arquivo `mockReports.ts` foi removido; componentes restantes devem ser avaliados caso tenham mocks proprios. |
+| Autenticacao | Login, logout, sessao, cadastro, verificacao de e-mail e recuperacao de senha usam APIs reais. | O front trabalha com cookie HttpOnly e `GET /api/auth/me` como fonte de sessao. |
+| Sessao/perfil | `UserContext.tsx` guarda usuario real, perfil global, papeis e vinculos operacionais. | O alternador de perfil mostra apenas acessos reais da sessao, sem bypass manual de permissao. |
+| Dados de denuncias | Feed, detalhe, minhas denuncias, mapa e criacao de nova denuncia usam backend real. | O arquivo `mockReports.ts` foi removido; cards usam `imagemCapaUrl` e detalhe busca anexos completos. |
 | Admin prefeitura | Dashboard, relatos, administracao, bairros e perfil usam dados reais ou contexto real. | Restam apenas refinos pontuais, como edicao posterior de categorias atendidas por secretaria. |
 | Secretaria | Dashboard, relatos, transferencia, status e usuarios usam fluxo operacional real. | Restam refinos de UX e eventuais filtros adicionais. |
-| Moderador | Painel simples integrado com resumo, sinalizacoes e acoes reais. | Comentarios ainda sao moderados por ID exato; sinalizacao especifica de comentario depende de decisao futura. |
-| Admin app | Telas existem para visao geral, organizacoes, usuarios, vinculos, categorias, moderacao, auditoria e operacional global. | Precisa integrar com endpoints reais e ajustar campos/regras. |
+| Moderador | Painel simples integrado com resumo, sinalizacoes e acoes reais. | Sinalizacoes de comentario agora aparecem como alvo especifico, com conteudo do comentario reportado. |
+| Admin app | Organizacoes, usuarios globais, vinculos, categorias, moderacao, auditoria e apoio operacional usam endpoints reais. | Restam apenas refinos de UX e revisao manual de consistencia com dados reais. |
 | Notificacoes | Lista/dropdown usam notificacoes reais. | Refinos visuais podem ser feitos depois. |
-| Upload/fotos | UI mostra area de fotos, mas sem estado real nem envio multipart. | Integrar fluxo: criar denuncia e depois anexar imagens. |
+| Upload/fotos | Criacao de denuncia envia anexos reais apos criar o relato e compacta imagens grandes no navegador. | Restam apenas ajustes finos de UX, como mensagens de progresso mais detalhadas. |
 
 ## Fonte de Verdade do Backend
 
@@ -178,7 +178,7 @@ Status de sinalizacao:
 
 | Tela/fluxo | Backend real | Ajuste necessario |
 |---|---|---|
-| Feed | `GET /api/feed/denuncias` | Usar `modo=MISTO`, filtros `cidade`, `bairro`, `status`, `categoriaId`, `excluirProprias`, `termo` e paginacao. |
+| Feed | `GET /api/feed/denuncias` | Usar `modo=MISTO`, filtros `cidade`, `bairro`, `status`, `categoriaId`, `excluirProprias`, `termo` e paginacao. Sem filtro de status, o backend oculta `ARQUIVADO` e `CONCLUIDO`. |
 | Cards de relato | `FeedDenunciaResponseDTO.denuncia` | `ReportCard` deve consumir view model gerado de `DenunciaResponseDTO`. |
 | Apoiar | `POST /api/denuncias/{id}/confirmacoes` e `DELETE /api/denuncias/{id}/confirmacoes` | Usar `apoiadaPeloUsuario` no feed ou buscar status via `/interacoes/status`. |
 | Urgente | `POST /api/denuncias/{id}/urgencias` e `DELETE /api/denuncias/{id}/urgencias` | Hoje o card mostra urgencias, mas o botao urgente nao esta plenamente integrado. |
@@ -187,10 +187,12 @@ Status de sinalizacao:
 | Detalhe | `GET /api/denuncias/{id}` | Buscar anexos, comentarios e timeline separadamente. |
 | Comentarios | `GET/POST /api/denuncias/{id}/comentarios` | Comentario de morador usa `{ "conteudo": "..." }`. |
 | Sinalizar relato | `POST /api/denuncias/{id}/sinalizacoes` | Enviar `motivo` categorico e `comentario` curto. |
+| Sinalizar comentario | `POST /api/denuncias/{denunciaId}/comentarios/{comentarioId}/sinalizacoes` | Enviar `motivo` categorico e `comentario` curto; backend evita duplicidade por usuario/comentario. |
+| Remover proprio comentario | `DELETE /api/denuncias/{denunciaId}/comentarios/{comentarioId}` | Apenas o autor do comentario pode remover logicamente o proprio comentario. |
 | Confirmar conclusao | `POST /api/denuncias/{id}/conclusao/confirmacao` | Payload `{ "feedback": "..." }`. |
 | Contestar conclusao | `POST /api/denuncias/{id}/conclusao/contestacao` | Payload `{ "feedback": "..." }`. |
-| Nova denuncia | `POST /api/denuncias` | Enviar categoria por `categoriaId`; cidade/prefeitura e bairro ativo sao selecionados no front quando houver dados controlados. |
-| Semelhantes antes do envio | `POST /api/denuncias/semelhantes` | Recomendado antes da criacao para sugerir apoio a denuncia existente. |
+| Nova denuncia | `POST /api/denuncias` | Enviar categoria por `categoriaId`, `prefeituraId`, `bairroId`, cidade e bairro. Backend valida que a prefeitura pertence a cidade do morador e que o bairro esta ativo nessa prefeitura. |
+| Semelhantes antes do envio | `POST /api/denuncias/semelhantes` | Recomendado antes da criacao para sugerir apoio a denuncia existente; aplica a mesma validacao de cidade/prefeitura/bairro da criacao. |
 | Fotos | `POST /api/denuncias/{id}/anexos` | Criar denuncia primeiro; depois enviar cada arquivo em `FormData` com chave `arquivo`. |
 
 ### Prefeitura
@@ -208,7 +210,7 @@ Status de sinalizacao:
 | Administrar secretarias | `POST /api/organizacoes/prefeituras/{prefeituraId}/secretarias` | Prefeitura so cria secretarias dentro do proprio escopo. |
 | Criar operador | `POST /api/organizacoes/{organizacaoId}/usuarios-institucionais` | Cria usuario institucional novo e vinculo; nao vincula usuario existente. |
 | Usuarios/vinculos | `GET /api/usuarios`, `GET /api/vinculos/organizacoes/{id}`, `PUT /api/vinculos/{id}` | Para prefeitura, backend filtra por cidade/vinculo. |
-| Gerenciar bairros | `GET/POST/PUT/PATCH /api/prefeituras/{prefeituraId}/bairros` | Implementado em `/prefeitura/bairros`: prefeitura lista, cria, edita e ativa/desativa bairros da propria cidade. |
+| Gerenciar bairros | `GET/POST/PUT/PATCH /api/prefeituras/{prefeituraId}/bairros` | Implementado em `/prefeitura/bairros`: prefeitura lista, cria, edita, ativa/desativa bairros da propria cidade e pode informar centroide opcional para uso em mapas. |
 | Transferir usuario entre secretarias | `PATCH /api/vinculos/{vinculoId}/secretaria` | Prefeitura move o vinculo institucional existente para outra secretaria do proprio municipio. |
 
 ### Secretaria
@@ -228,7 +230,7 @@ Status de sinalizacao:
 | Tela/fluxo | Backend real | Ajuste necessario |
 |---|---|---|
 | Resumo | `GET /api/paineis/moderacao/resumo` | Disponivel para `MODERADOR` e `ADMIN_APP`. |
-| Sinalizacoes | `GET /api/moderacoes/sinalizacoes-denuncia?status=PENDENTE` | Retorna `Page<SinalizacaoDenunciaResponseDTO>`. |
+| Sinalizacoes | `GET /api/moderacoes/sinalizacoes-denuncia?status=PENDENTE` | Retorna `Page<SinalizacaoDenunciaResponseDTO>`, podendo incluir `comentarioId` e `comentarioSinalizadoConteudo` quando a sinalizacao for sobre comentario. |
 | Marcar analisada | `POST /api/moderacoes/sinalizacoes-denuncia/{id}/analise` | Sem body. |
 | Arquivar denuncia | `POST /api/moderacoes/denuncias/{denunciaId}/arquivamento` | Payload `{ "motivo": "..." }`. |
 | Remover comentario | `POST /api/moderacoes/comentarios/{comentarioId}/remocao` | Payload `{ "motivo": "..." }`. |
@@ -372,7 +374,7 @@ Observacoes da implementacao:
 - Reports de denuncia agora usam motivo fixo por enum e comentario curto: `motivo` + `comentario`.
 - Motivos fixos atuais: `IMAGEM_INADEQUADA`, `SPAM`, `FAKE_NEWS`, `CONTEUDO_OFENSIVO`, `DADOS_PESSOAIS_EXPOSTOS`, `DENUNCIA_DUPLICADA`, `LOCALIZACAO_INCORRETA`, `CATEGORIA_INCORRETA`, `OUTRO`.
 - A troca de usuario entre secretarias altera o vinculo existente via `PATCH /api/vinculos/{vinculoId}/secretaria`, sem criar novo login nem novo vinculo ativo.
-- A validacao obrigatoria do bairro em cadastro de morador e criacao de denuncia ainda ficou pendente porque os DTOs atuais enviam `cidade`/`bairro`, mas nao enviam `prefeituraId` ou `estado`. Validar apenas por nome da cidade poderia ser ambiguo.
+- A validacao obrigatoria de cidade/prefeitura e bairro foi resolvida na criacao de denuncia: o front envia `prefeituraId` e `bairroId`, e o backend valida se a denuncia pertence a cidade do morador e se o bairro ativo existe naquela prefeitura.
 
 ### Etapa 1 - Infra de API e sessao
 
@@ -427,7 +429,7 @@ Observacoes da implementacao:
 - `HomePage` agora carrega o feed real em `GET /api/feed/denuncias`.
 - A aba padrao usa `modo=MISTO`, preservando a proposta de timeline mista sem depender apenas de cronologia ou engajamento.
 - As abas `Em alta` e `Recentes` usam `modo=EM_ALTA` e `modo=RECENTES`.
-- A aba `Resolvidos` usa `status=CONCLUIDO` e `modo=MISTO`; denuncias concluidas continuam visiveis conforme instrucao do projeto, com a regra final de exibicao para estudo futuro.
+- A aba `Concluidas` usa `status=CONCLUIDO` e `modo=MISTO`; o feed inicial sem filtro de status exclui denuncias `CONCLUIDO`.
 - Quando o usuario tem cidade na sessao, o feed envia `cidade` para manter a listagem regional.
 - Apoio e urgencia agora chamam `POST/DELETE /api/denuncias/{id}/confirmacoes` e `POST/DELETE /api/denuncias/{id}/urgencias`, atualizando os contadores retornados pelo backend.
 - A busca textual do modal envia `termo` para o backend no feed, e a categoria do modal envia `categoriaId` real carregado de `GET /api/categorias`.
@@ -463,7 +465,7 @@ Checklist:
 - [x] Integrar reatribuicao manual pela prefeitura.
 - [x] Integrar CSV operacional.
 - [x] Integrar paginacao visual real usando `Page` do backend.
-- [x] Garantir que denuncias concluidas aparecam, mas deixando a regra final de exibicao para decisao futura, conforme instrucao do projeto.
+- [x] Garantir que denuncias concluidas aparecam nos paineis operacionais e na aba propria de concluidas, sem aparecerem no feed inicial sem filtro.
 
 Observacoes da implementacao:
 
@@ -503,7 +505,7 @@ Observacoes da implementacao:
 - A moderacao de usuario usa `POST /api/moderacoes/usuarios/{usuarioId}/advertencia`, `/suspensao` e `/reativacao`.
 - O historico usa `GET /api/moderacoes/usuarios/{usuarioId}/historico`.
 - Como `GET /api/usuarios` nao permite `MODERADOR`, a tela nao simula busca textual de usuario. A moderacao de usuario funciona por ID exato e o backend valida se a conta pode ser moderada.
-- Comentarios tambem sao removidos por ID exato porque o backend atual nao possui sinalizacao especifica de comentario.
+- Comentarios podem ser sinalizados pelo morador na pagina do relato; a moderacao recebe o `comentarioId` e o conteudo sinalizado. A remocao moderada ainda usa ID exato no painel simples do moderador.
 
 ### Etapa 5 - Admin app
 
@@ -564,6 +566,8 @@ Checklist:
 - [x] Criar endpoint/campo otimizado de foto de capa ou thumbnail da denuncia no feed para evitar N+1 de anexos.
 - [x] Criar filtros server-side para usuarios, se necessario.
 - [x] Criar endpoint de marcar todas notificacoes como lidas, se a UI mantiver essa acao.
+- [x] Aplicar code-splitting inicial nas rotas do front para reduzir o bundle principal.
+- [x] Remover `front/dist/` do versionamento e trata-lo como artefato de build.
 - [ ] Avaliar no futuro analytics por periodo/comparativos, caso volte a ser prioridade.
 
 ## Arquitetura Recomendada no Front
@@ -606,7 +610,7 @@ Regras:
 - Componentes nao devem chamar endpoints diretamente.
 - Paginas chamam services ou hooks.
 - Mappers convertem enum/campo tecnico para label/view model.
-- `ProfileSwitcher` deve ser tratado como ferramenta de prototipo/dev.
+- `ProfileSwitcher` deve alternar apenas entre acessos reais da sessao, sem criar permissao visual que o usuario nao possui.
 - Nunca salvar access token em `localStorage`; o backend ja usa cookie HttpOnly.
 
 ## Decisoes Resolvidas e Pendencias Remanescentes
@@ -617,28 +621,29 @@ Regras:
 | Admin app com metricas operacionais detalhadas | Resolvido | Nao precisa agora. Simplificar/remover no front. |
 | Analytics detalhado | Resolvido | Nao implementar agora. |
 | Bairros controlados por prefeitura/cidade | Resolvido | Backend, cadastro, criacao de denuncia e tela de gestao da prefeitura ja usam bairros controlados. |
-| Transferir usuario entre secretarias | Resolvido | Implementar fluxo de prefeitura para mover usuario institucional entre secretarias do proprio municipio. |
+| Transferir usuario entre secretarias | Resolvido | Prefeitura move usuario institucional entre secretarias do proprio municipio alterando o vinculo existente. |
 | Report de post | Resolvido | Implementado com motivo fixo por enum e mini comentario obrigatorio. |
 | Foto de capa no feed/minhas denuncias | Resolvido | Backend fornece `imagemCapaUrl` e o front usa esse campo em feed, mapa e minhas denuncias, sem chamadas extras por card. |
 | Motivos de report | Resolvido | Enum fixo com motivos comuns de moderacao. |
-| Dados de bairro | Resolvido | Implementado com `nome` e `ativo`; mapa/geometria fica como melhoria futura. |
+| Dados de bairro | Resolvido | Implementado com `nome`, `ativo` e centroide opcional (`centroideLatitude`/`centroideLongitude`). Geometria completa por poligono segue como melhoria futura dependente de dados oficiais. |
 | Transferencia de usuario entre secretarias | Resolvido | O vinculo existente troca de secretaria; nao cria novo vinculo. |
+| Validacao forte de prefeitura/bairro na denuncia | Resolvido | `DenunciaCreateRequestDTO` aceita `prefeituraId` e `bairroId`; criacao e busca de semelhantes validam cidade do morador, prefeitura e bairro ativo. |
+| Concluidas no feed inicial | Resolvido | Feed sem filtro de status nao retorna `CONCLUIDO`; concluidas aparecem somente em filtro/aba propria. |
+| Sinalizacao de comentario | Resolvido | Comentarios podem ser reportados por rota propria e aparecem para moderacao com `comentarioId` e conteudo. |
+| Busca operacional server-side | Resolvido | `GET /api/operacional/organizacoes/{id}/denuncias` aceita `termo` e filtra no backend. |
+| Categorias atendidas por secretaria | Resolvido | Prefeitura/Admin App atualizam categorias cobertas por secretaria via `PATCH /api/organizacoes/{id}/categorias`. |
 
 Pendencias conscientes atuais:
 
-1. Decidir se `DenunciaCreateRequestDTO` deve passar a receber `prefeituraId` e/ou `bairroId` para permitir validacao forte de bairro controlado no backend.
-2. Avaliar futuramente centroide ou limites geograficos do bairro caso o mapa precise inferir bairro automaticamente.
-3. Definir a regra final de exibicao/ordenacao de denuncias concluidas.
-4. Decidir se havera sinalizacao especifica de comentarios, alem da sinalizacao de denuncia ja implementada.
-5. Avaliar se a busca textual do painel operacional precisa ser server-side; hoje ela filtra apenas a pagina carregada porque o endpoint operacional nao possui `termo`.
-6. Avaliar se a prefeitura precisa editar categorias atendidas de uma secretaria depois da criacao.
+1. Avaliar futuramente geometria completa dos bairros, caso o mapa precise inferir bairro automaticamente por area/poligono. Hoje o sistema guarda apenas centroide opcional e nao inventa limites geograficos.
+2. Revisar visualmente, em navegador, os novos fluxos de sinalizacao/remocao de comentario, gestao de centroide e busca operacional com dados reais.
 
 ## Ordem Recomendada Para Comecar
 
 1. Revisar manualmente os fluxos integrados no navegador com backend local rodando.
 2. Corrigir eventuais ajustes visuais/UX encontrados nos perfis morador, prefeitura, secretaria, moderador e admin app.
-3. Decidir as pendencias de regra de negocio listadas acima antes de alterar contratos do backend.
-4. Quando as decisoes forem confirmadas, implementar os refinamentos finais de contrato e Swagger.
+3. Avaliar apenas as melhorias futuras conscientemente adiadas, como geometria completa de bairros.
+4. Quando houver nova decisao de produto, atualizar contrato, Swagger e docs antes de integrar no front.
 5. Preparar uma rodada final de testes ponta a ponta.
 
 ## Resumo Executivo
@@ -647,12 +652,8 @@ O front deixou de ser apenas um prototipo visual e ja esta majoritariamente cone
 
 As lacunas restantes sao principalmente decisoes conscientes de regra de negocio ou refinamentos de experiencia:
 
-- validar bairro controlado com IDs no contrato de criacao de denuncia;
-- estudar centroide/geometria de bairros para usos futuros no mapa;
-- definir a regra final para exibicao/ordenacao de denuncias concluidas;
-- decidir se comentarios terao sinalizacao propria;
-- avaliar busca textual server-side no painel operacional;
-- decidir se a prefeitura precisa editar categorias atendidas depois de criar uma secretaria.
+- estudar geometria completa de bairros para usos futuros no mapa, sem inventar limites sem dados oficiais;
+- revisar no navegador os fluxos novos com massa real.
 
 Antes de novos contratos, a recomendacao e rodar os fluxos no navegador com dados reais e corrigir os ajustes visuais ou pequenos desalinhamentos que aparecerem.
 
@@ -685,3 +686,6 @@ Antes de novos contratos, a recomendacao e rodar os fluxos no navegador com dado
 - Fase 25: Removidos arquivos antigos de prototipo sem rota ativa (`AdminPage`, `AdminDashboard`, `MapView` e `AnalyticsPage`) para reduzir residuos de mocks no front.
 - Fase 26: Reescrita a administracao da prefeitura com dados reais para secretarias, operadores institucionais, vinculos, ativacao/desativacao e transferencia entre secretarias.
 - Fase 27: Integrado o drawer lateral de notificacoes com `/api/notificacoes/minhas`, leitura individual e marcar todas como lidas, removendo listas fixas do prototipo.
+- Fase 28: Resolvidas as pendencias priorizadas de regra/contrato: criacao e semelhantes validam prefeitura/bairro da cidade do morador, bairros ganharam centroide opcional, feed inicial oculta concluidas, comentarios podem ser sinalizados/removidos pelo autor, painel operacional ganhou busca server-side e prefeitura pode manejar categorias atendidas por secretaria.
+- Fase 29: Criado README geral de apresentacao para GitHub e aplicado code-splitting nas rotas do front com `React.lazy`/`Suspense`; o build passou e o chunk principal caiu de aproximadamente 664 kB para 308 kB, removendo o alerta de chunk acima de 500 kB.
+- Fase 30: `front/dist/` foi removido do versionamento e adicionado ao `.gitignore`; o build continua gerando o artefato localmente, mas os arquivos com hash nao ficam mais como alteracoes pendentes no Git.

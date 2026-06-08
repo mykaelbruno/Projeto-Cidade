@@ -37,6 +37,12 @@ public class Bairro {
 	@Column(nullable = false)
 	private boolean ativo = true;
 
+	@Column(name = "centroide_latitude")
+	private Double centroideLatitude;
+
+	@Column(name = "centroide_longitude")
+	private Double centroideLongitude;
+
 	@Column(name = "criado_em", nullable = false, updatable = false)
 	private Instant criadoEm = Instant.now();
 
@@ -71,6 +77,24 @@ public class Bairro {
 
 	public void setAtivo(boolean ativo) {
 		this.ativo = ativo;
+		tocarAtualizacao();
+	}
+
+	public Double getCentroideLatitude() {
+		return centroideLatitude;
+	}
+
+	public void setCentroideLatitude(Double centroideLatitude) {
+		this.centroideLatitude = centroideLatitude;
+		tocarAtualizacao();
+	}
+
+	public Double getCentroideLongitude() {
+		return centroideLongitude;
+	}
+
+	public void setCentroideLongitude(Double centroideLongitude) {
+		this.centroideLongitude = centroideLongitude;
 		tocarAtualizacao();
 	}
 

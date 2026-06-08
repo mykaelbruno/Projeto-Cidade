@@ -64,6 +64,8 @@ export function ModeracaoPage() {
     return sinalizacoes.filter((sinalizacao) => [
       sinalizacao.denunciaId,
       sinalizacao.denunciaTitulo,
+      sinalizacao.comentarioId,
+      sinalizacao.comentarioSinalizadoConteudo,
       sinalizacao.motivo,
       sinalizacao.comentario,
       sinalizacao.autorNome,
@@ -228,11 +230,22 @@ export function ModeracaoPage() {
                     <span className="text-xs text-muted-foreground">
                       Relato #{sinalizacao.denunciaId}
                     </span>
+                    {sinalizacao.comentarioId && (
+                      <span className="text-xs text-muted-foreground">
+                        Comentario #{sinalizacao.comentarioId}
+                      </span>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       {new Date(sinalizacao.criadoEm).toLocaleString('pt-BR')}
                     </span>
                   </div>
                   <h4 className="font-medium text-foreground">{sinalizacao.denunciaTitulo}</h4>
+                  {sinalizacao.comentarioSinalizadoConteudo && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                      <p className="text-xs font-medium text-amber-800">Comentario sinalizado</p>
+                      <p className="text-sm text-amber-900">{sinalizacao.comentarioSinalizadoConteudo}</p>
+                    </div>
+                  )}
                   <p className="text-sm text-muted-foreground">{sinalizacao.comentario}</p>
                   <p className="text-xs text-muted-foreground">
                     Reportado por {sinalizacao.autorNome}

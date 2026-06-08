@@ -9,6 +9,10 @@ public interface BairroRepository extends JpaRepository<Bairro, Long> {
 
 	List<Bairro> findByPrefeituraIdAndAtivoTrueOrderByNomeAsc(Long prefeituraId);
 
+	java.util.Optional<Bairro> findByIdAndPrefeituraIdAndAtivoTrue(Long id, Long prefeituraId);
+
+	java.util.Optional<Bairro> findByPrefeituraIdAndNomeIgnoreCaseAndAtivoTrue(Long prefeituraId, String nome);
+
 	boolean existsByPrefeituraIdAndNomeIgnoreCase(Long prefeituraId, String nome);
 
 	boolean existsByPrefeituraIdAndNomeIgnoreCaseAndIdNot(Long prefeituraId, String nome, Long id);

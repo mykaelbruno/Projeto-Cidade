@@ -73,6 +73,8 @@ export function AdministracaoPage() {
 
   const [secretariaEditando, setSecretariaEditando] = useState<OrganizacaoResponseDTO | null>(null);
   const [nomeEditando, setNomeEditando] = useState('');
+  const [secretariaCategoriasEditando, setSecretariaCategoriasEditando] = useState<OrganizacaoResponseDTO | null>(null);
+  const [categoriasEditando, setCategoriasEditando] = useState<Set<number>>(new Set());
   const [vinculoMovendo, setVinculoMovendo] = useState<VinculoUsuarioOrganizacaoResponseDTO | null>(null);
   const [destinoMovimento, setDestinoMovimento] = useState('');
 
@@ -147,6 +149,27 @@ export function AdministracaoPage() {
     });
   }
 
+  function alternarCategoriaEditando(categoriaId: number) {
+    setCategoriasEditando((atual) => {
+      const copia = new Set(atual);
+      if (copia.has(categoriaId)) {
+        copia.delete(categoriaId);
+      } else {
+        copia.add(categoriaId);
+      }
+      return copia;
+    });
+  }
+
+  function abrirCategoriasSecretaria(secretaria: OrganizacaoResponseDTO) {
+    setSecretariaCategoriasEditando(secretaria);
+    setCategoriasEditando(new Set(
+      categorias
+        .filter((categoria) => categoria.organizacaoResponsavelPadraoId === secretaria.id)
+        .map((categoria) => categoria.id),
+    ));
+  }
+
   async function criarSecretaria() {
     if (!prefeituraId || nomeSecretaria.trim().length < 3) return;
 
@@ -199,6 +222,26 @@ export function AdministracaoPage() {
     try {
       await organizacaoService.alterarAtiva(secretaria.id, !secretaria.ativa);
       setFeedback(secretaria.ativa ? 'Secretaria desativada.' : 'Secretaria ativada.');
+      await carregarDados();
+    } catch (error) {
+      setErro(getApiErrorMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function salvarCategoriasSecretaria() {
+    if (!secretariaCategoriasEditando) return;
+
+    setIsSaving(true);
+    setErro(null);
+
+    try {
+      await organizacaoService.atualizarCategoriasSecretaria(secretariaCategoriasEditando.id, {
+        categoriasIds: Array.from(categoriasEditando),
+      });
+      setSecretariaCategoriasEditando(null);
+      setFeedback('Categorias da secretaria atualizadas.');
       await carregarDados();
     } catch (error) {
       setErro(getApiErrorMessage(error));
@@ -465,6 +508,15 @@ export function AdministracaoPage() {
                   variant="outline"
                   size="sm"
                   className="gap-2"
+                  onClick={() => abrirCategoriasSecretaria(secretaria)}
+                >
+                  <Building2 className="h-4 w-4" />
+                  Categorias
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
                   onClick={() => alterarSecretariaAtiva(secretaria)}
                   disabled={isSaving}
                 >
@@ -563,6 +615,32 @@ export function AdministracaoPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setSecretariaEditando(null)}>Cancelar</Button>
             <Button onClick={salvarSecretaria} disabled={isSaving || nomeEditando.trim().length < 3}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(secretariaCategoriasEditando)} onOpenChange={(open) => !open && setSecretariaCategoriasEditando(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Categorias atendidas</DialogTitle>
+            <DialogDescription>
+              Defina quais categorias serao encaminhadas por padrao para {secretariaCategoriasEditando?.nome}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {categorias.map((categoria) => (
+              <label key={categoria.id} className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm">
+                <Checkbox
+                  checked={categoriasEditando.has(categoria.id)}
+                  onCheckedChange={() => alternarCategoriaEditando(categoria.id)}
+                />
+                <span>{categoria.nome}</span>
+              </label>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSecretariaCategoriasEditando(null)}>Cancelar</Button>
+            <Button onClick={salvarCategoriasSecretaria} disabled={isSaving}>Salvar categorias</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -58,9 +58,10 @@ public class DenunciaController implements DenunciaControllerOpenApi {
 	@PostMapping("/semelhantes")
 	@PreAuthorize("hasRole('MORADOR')")
 	public List<DenunciaSemelhanteResponseDTO> buscarSemelhantes(
-			@Valid @RequestBody DenunciaCreateRequestDTO request
+			@Valid @RequestBody DenunciaCreateRequestDTO request,
+			@AuthenticationPrincipal Jwt jwt
 	) {
-		return denunciaSemelhanteService.buscarSemelhantes(request);
+		return denunciaSemelhanteService.buscarSemelhantes(request, Long.valueOf(jwt.getSubject()));
 	}
 
 	@Override

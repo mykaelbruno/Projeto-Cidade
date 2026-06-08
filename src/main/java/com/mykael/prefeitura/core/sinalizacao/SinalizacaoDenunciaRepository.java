@@ -9,6 +9,8 @@ public interface SinalizacaoDenunciaRepository extends JpaRepository<Sinalizacao
 
 	boolean existsByDenunciaIdAndAutorId(Long denunciaId, Long autorId);
 
+	boolean existsByComentarioSinalizadoIdAndAutorId(Long comentarioId, Long autorId);
+
 	long countByStatus(StatusSinalizacaoDenuncia status);
 
 	Page<SinalizacaoDenuncia> findByStatus(StatusSinalizacaoDenuncia status, Pageable pageable);

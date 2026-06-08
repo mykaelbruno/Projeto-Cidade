@@ -119,6 +119,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
             bairro,
             status: status === 'TODOS' ? null : status,
             categoriaId: categoriaId === 'TODAS' ? null : Number(categoriaId),
+            termo: busca,
             page: paginaAtual,
             size: tamanhoPagina,
           }),
@@ -139,7 +140,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     } finally {
       setCarregando(false);
     }
-  }, [bairro, categoriaId, cidade, modo, paginaAtual, status, tamanhoPagina, vinculo]);
+  }, [bairro, busca, categoriaId, cidade, modo, paginaAtual, status, tamanhoPagina, vinculo]);
 
   useEffect(() => {
     carregarDados();
@@ -147,19 +148,9 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
 
   useEffect(() => {
     setPaginaAtual(0);
-  }, [bairro, categoriaId, cidade, status, tamanhoPagina]);
+  }, [bairro, busca, categoriaId, cidade, status, tamanhoPagina]);
 
-  const denunciasFiltradas = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return denuncias;
-
-    return denuncias.filter((denuncia) =>
-      String(denuncia.id).includes(termo) ||
-      denuncia.titulo.toLowerCase().includes(termo) ||
-      denuncia.bairro.toLowerCase().includes(termo) ||
-      denuncia.categoriaNome.toLowerCase().includes(termo),
-    );
-  }, [busca, denuncias]);
+  const denunciasFiltradas = denuncias;
 
   const grupos = useMemo(() => {
     if (modo === 'secretaria') {
@@ -305,6 +296,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
         bairro,
         status: status === 'TODOS' ? null : status,
         categoriaId: categoriaId === 'TODAS' ? null : Number(categoriaId),
+        termo: busca,
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');

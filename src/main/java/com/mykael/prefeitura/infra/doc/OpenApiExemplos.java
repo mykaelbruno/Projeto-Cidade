@@ -55,6 +55,8 @@ public final class OpenApiExemplos {
 			  "titulo": "Buraco grande na rua",
 			  "descricao": "Existe um buraco grande na rua principal do bairro ha varios dias.",
 			  "categoriaId": 1,
+			  "prefeituraId": 1,
+			  "bairroId": 4,
 			  "anonima": false,
 			  "cidade": "Joao Pessoa",
 			  "bairro": "Centro",
@@ -70,6 +72,8 @@ public final class OpenApiExemplos {
 			  "titulo": "Buraco grande perto da praca",
 			  "descricao": "O buraco na rua principal continua causando risco para carros e pedestres.",
 			  "categoriaId": 1,
+			  "prefeituraId": 1,
+			  "bairroId": 4,
 			  "anonima": false,
 			  "cidade": "Joao Pessoa",
 			  "bairro": "Centro",
@@ -177,7 +181,9 @@ public final class OpenApiExemplos {
 
 	public static final String BAIRRO = """
 			{
-			  "nome": "Centro"
+			  "nome": "Centro",
+			  "centroideLatitude": -6.838,
+			  "centroideLongitude": -35.126
 			}
 			""";
 

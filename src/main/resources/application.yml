@@ -60,6 +60,9 @@ management:
     web:
       exposure:
         include: health,info
+  health:
+    mail:
+      enabled: ${MAIL_HEALTH_ENABLED:${MAIL_ENABLED:false}}
 
 app:
   email:

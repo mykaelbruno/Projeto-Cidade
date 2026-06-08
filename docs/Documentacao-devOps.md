@@ -17,6 +17,13 @@ Como apoio operacional, o projeto agora tambem possui um modelo de ambiente para
 
 - [.env.docker.example](C:/Users/mykae/OneDrive/Desktop/prefeitura/.env.docker.example)
 
+O `docker-compose.yml` agora aceita dois arquivos opcionais para injetar variaveis no container do backend:
+
+- `.env` para uso local geral do projeto;
+- `.env.docker` para um pacote/exportacao focado em Docker.
+
+Se nenhum deles existir, a stack ainda consegue montar usando os defaults definidos no Compose e no `application.yml`, mas isso nao e o ideal para ambiente real.
+
 ## Arquitetura Docker adotada
 
 ### Servicos
@@ -178,6 +185,12 @@ VITE_API_URL=/api
 
 ## Fluxo sugerido de deploy manual
 
+Antes do primeiro deploy, a recomendacao e:
+
+1. copiar `.env.docker.example` para `.env.docker`;
+2. ajustar senhas, dominio, JWT e SMTP;
+3. subir a stack com esse arquivo presente na raiz do projeto.
+
 No servidor:
 
 ```powershell
@@ -209,6 +222,16 @@ docker compose ps
 - refresh em rotas internas sem `404`
 - chamadas para `/api` funcionando no navegador
 - cookies de autenticacao sendo enviados corretamente
+
+Observacao: quando `MAIL_ENABLED=false`, o health de e-mail tambem fica desabilitado automaticamente para evitar falso `503` em ambientes sem SMTP local.
+
+## Validacao da dockerizacao nesta etapa
+
+Nesta revisao final de exportacao:
+
+- `docker compose config` foi validado com sucesso;
+- `docker compose build backend frontend` foi validado com sucesso;
+- a stack ficou consistente com o frontend em `front/`, backend na raiz e banco em `postgres`.
 
 ## Limites conscientes desta etapa
 

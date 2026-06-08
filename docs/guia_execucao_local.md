@@ -13,12 +13,15 @@ O projeto possui:
 
 - `.env`: arquivo local usado na execucao. Fica ignorado pelo Git.
 - `.env.example`: modelo seguro para recriar o `.env` em outra maquina.
+- `.env.docker.example`: modelo para empacotar ou subir a stack Docker em outra maquina, podendo ser copiado para `.env.docker`.
 
 O Spring Boot carrega o `.env` automaticamente quando ele existir, por meio da configuracao:
 
 ```yml
 spring.config.import: optional:file:.env[.properties]
 ```
+
+No Docker Compose, o backend aceita tambem um `.env.docker` opcional para facilitar exportacao do projeto sem depender do seu `.env` pessoal.
 
 ## Variaveis principais
 
@@ -69,9 +72,17 @@ MAIL_FROM_NAME=Cidade Ativa
 
 Com `MAIL_ENABLED=false`, verificacao de conta e recuperacao de senha continuam funcionando em modo local pelos logs da aplicacao. Para testar envio real localmente, use um servidor SMTP de desenvolvimento, como MailHog/Mailpit, e mude `MAIL_ENABLED=true`.
 
+Quando `MAIL_ENABLED=false`, o healthcheck de e-mail do Actuator tambem fica desligado automaticamente, evitando que `/actuator/health` retorne `503` por falta de SMTP local.
+
 ## Subir stack completa ou apenas o banco
 
 ### Stack completa em Docker
+
+Recomendacao:
+
+1. copie `.env.docker.example` para `.env.docker`;
+2. ajuste as variaveis necessarias;
+3. execute:
 
 ```powershell
 docker compose up -d --build

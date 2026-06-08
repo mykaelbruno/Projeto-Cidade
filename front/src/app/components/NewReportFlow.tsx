@@ -17,6 +17,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { LocationPickerMap } from './LocationPickerMap';
 import { ReportLocationMap } from './ReportLocationMap';
 import { categoriaService } from '../services/categoriaService';
 import { denunciaService } from '../services/denunciaService';
@@ -99,6 +100,8 @@ export function NewReportFlow({ onClose, onCreated, onViewReport }: NewReportFlo
   const [referencePoint, setReferencePoint] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [mapCenterLatitude, setMapCenterLatitude] = useState(-6.8371);
+  const [mapCenterLongitude, setMapCenterLongitude] = useState(-35.1261);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [filePreviews, setFilePreviews] = useState<string[]>([]);
@@ -202,11 +205,48 @@ export function NewReportFlow({ onClose, onCreated, onViewReport }: NewReportFlo
     }
 
     if (selectedBairro && selectedBairro.centroideLatitude !== null && selectedBairro.centroideLongitude !== null) {
+      setMapCenterLatitude(selectedBairro.centroideLatitude);
+      setMapCenterLongitude(selectedBairro.centroideLongitude);
       setLatitude(selectedBairro.centroideLatitude);
       setLongitude(selectedBairro.centroideLongitude);
       setLocationError(null);
     }
   }, [referencePoint, selectedBairro, street]);
+
+  useEffect(() => {
+    if (latitude !== null && longitude !== null) {
+      setMapCenterLatitude(latitude);
+      setMapCenterLongitude(longitude);
+    }
+  }, [latitude, longitude]);
+
+  useEffect(() => {
+    if (!city.trim() || latitude !== null || longitude !== null) {
+      return;
+    }
+
+    let active = true;
+
+    geocodingService.buscarCoordenadas({
+      cidade: city,
+      estado: selectedPrefeitura?.estado ?? null,
+    })
+      .then((result) => {
+        if (!active || !result) {
+          return;
+        }
+
+        setMapCenterLatitude(result.latitude);
+        setMapCenterLongitude(result.longitude);
+      })
+      .catch(() => {
+        // Mantem o centro anterior se a busca da cidade falhar.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [city, latitude, longitude, selectedPrefeitura?.estado]);
 
   useEffect(() => {
     if (!city.trim()) {
@@ -336,6 +376,8 @@ export function NewReportFlow({ onClose, onCreated, onViewReport }: NewReportFlo
 
         setLatitude(nextLatitude);
         setLongitude(nextLongitude);
+        setMapCenterLatitude(nextLatitude);
+        setMapCenterLongitude(nextLongitude);
 
         try {
           const result = await geocodingService.buscarEndereco(nextLatitude, nextLongitude);
@@ -363,6 +405,40 @@ export function NewReportFlow({ onClose, onCreated, onViewReport }: NewReportFlo
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
+  }
+
+  async function handleMapPick(nextLatitude: number, nextLongitude: number) {
+    setLatitude(nextLatitude);
+    setLongitude(nextLongitude);
+    setMapCenterLatitude(nextLatitude);
+    setMapCenterLongitude(nextLongitude);
+    setIsResolvingLocation(true);
+    setLocationError(null);
+    resetSimilarCheck();
+
+    try {
+      const result = await geocodingService.buscarEndereco(nextLatitude, nextLongitude);
+
+      if (!result) {
+        setLocationError('O ponto foi marcado, mas nao foi possivel identificar o endereco automaticamente.');
+        return;
+      }
+
+      if (result.endereco) {
+        setStreet(result.endereco);
+      }
+
+      const bairroEncontrado = findMatchingBairroName(result.bairro, bairros);
+      if (bairroEncontrado) {
+        setNeighborhood(bairroEncontrado);
+      } else if (result.bairro && bairros.length === 0) {
+        setNeighborhood(result.bairro);
+      }
+    } catch {
+      setLocationError('O ponto foi marcado, mas nao foi possivel preencher o endereco automaticamente.');
+    } finally {
+      setIsResolvingLocation(false);
+    }
   }
 
   async function checkSimilar() {
@@ -495,26 +571,14 @@ export function NewReportFlow({ onClose, onCreated, onViewReport }: NewReportFlo
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)] gap-6 items-start">
         <div className="space-y-4 lg:sticky lg:top-24">
-          <ReportLocationMap
-            latitude={latitude}
-            longitude={longitude}
-            label={locationLabel || city || 'Localizacao do relato'}
-            className="h-[320px] lg:h-[520px]"
+          <LocationPickerMap
+            centerLatitude={mapCenterLatitude}
+            centerLongitude={mapCenterLongitude}
+            markerLatitude={latitude}
+            markerLongitude={longitude}
+            isUpdating={isResolvingLocation}
+            onPick={handleMapPick}
           />
-
-          <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground space-y-1">
-            <div className="flex items-center gap-2 text-foreground font-medium">
-              <MapPin className="w-4 h-4 text-primary" />
-              Local usado no mapa
-            </div>
-            <p>{locationLabel || 'Informe o endereco ou use sua localizacao atual para posicionar o relato.'}</p>
-            {isResolvingLocation && (
-              <p className="inline-flex items-center gap-2 text-primary">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Atualizando localizacao...
-              </p>
-            )}
-          </div>
         </div>
 
         <div className="space-y-4">

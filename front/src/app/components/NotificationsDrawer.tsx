@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Bell, CheckCheck, FileText, Loader2, MessageCircle } from 'lucide-react';
+import { AlertTriangle, Bell, CheckCheck, FileText, Loader2, MessageCircle, X } from 'lucide-react';
 import { notifyNotificationsUpdated } from '../hooks/useUnreadNotificationsCount';
 import { notificacaoService } from '../services/notificacaoService';
 import type { NotificacaoResponseDTO, TipoNotificacao } from '../types/notificacao';
@@ -23,7 +23,7 @@ export function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProp
     setErro(null);
 
     try {
-      const pagina = await notificacaoService.listarMinhas({ page: 0, size: 30 });
+      const pagina = await notificacaoService.listarMinhas({ somenteNaoLidas: true, page: 0, size: 30 });
       setNotificacoes(pagina.content);
       notifyNotificationsUpdated();
     } catch (error) {
@@ -39,21 +39,13 @@ export function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProp
     }
   }, [carregarNotificacoes, isOpen]);
 
-  async function abrirNotificacao(notificacao: NotificacaoResponseDTO) {
+  async function dispensarNotificacao(notificacao: NotificacaoResponseDTO) {
     try {
-      if (!notificacao.lida) {
-        const atualizada = await notificacaoService.marcarComoLida(notificacao.id);
-        setNotificacoes((current) =>
-          current.map((item) => (item.id === atualizada.id ? atualizada : item)),
-        );
-        notifyNotificationsUpdated();
-      }
-
-      if (notificacao.link) {
-        window.location.href = notificacao.link;
-      }
+      await notificacaoService.marcarComoLida(notificacao.id);
+      setNotificacoes((current) => current.filter((item) => item.id !== notificacao.id));
+      notifyNotificationsUpdated();
     } catch (error) {
-      setErro(error instanceof Error ? error.message : 'Nao foi possivel atualizar a notificacao.');
+      setErro(error instanceof Error ? error.message : 'Nao foi possivel remover a notificacao da lista.');
     }
   }
 
@@ -69,7 +61,7 @@ export function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProp
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="text-lg font-display font-bold">
             Notificacoes
@@ -88,7 +80,7 @@ export function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProp
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-3 mt-4">
+        <div className="mt-4 flex-1 overflow-y-auto space-y-3 pr-1">
           {isLoading ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
               <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
@@ -110,33 +102,39 @@ export function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProp
             </div>
           ) : (
             notificacoes.map((notification) => (
-              <button
+              <div
                 key={notification.id}
-                onClick={() => abrirNotificacao(notification)}
-                className={`w-full rounded-xl border border-border p-4 text-left transition-colors hover:bg-muted ${
-                  !notification.lida ? 'bg-primary/5' : 'bg-card'
-                }`}
+                className="w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm"
               >
                 <div className="flex items-start gap-3">
                   <div className={`w-10 h-10 ${getIconBackground(notification.tipo)} rounded-full flex items-center justify-center flex-shrink-0`}>
                     {getIcon(notification.tipo)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium text-foreground mb-1">
-                        {notification.titulo}
-                      </p>
-                      {!notification.lida && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {notification.titulo}
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {notification.mensagem}
+                        </p>
+                        <span className="mt-2 inline-block text-[11px] text-muted-foreground">
+                          {new Date(notification.criadoEm).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => dispensarNotificacao(notification)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        title="Remover da lista"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {notification.mensagem}
-                    </p>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(notification.criadoEm).toLocaleString('pt-BR')}
-                    </span>
                   </div>
                 </div>
-              </button>
+              </div>
             ))
           )}
         </div>

@@ -124,6 +124,7 @@ export function ReportDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successTone, setSuccessTone] = useState<'success' | 'danger'>('success');
   const [comentario, setComentario] = useState('');
   const [feedback, setFeedback] = useState('');
   const [feedbackMode, setFeedbackMode] = useState<'confirmar' | 'contestar' | null>(null);
@@ -283,6 +284,7 @@ export function ReportDetailPage() {
       setDenuncia(response);
       setFeedback('');
       setFeedbackMode(null);
+      setSuccessTone(feedbackMode === 'confirmar' ? 'success' : 'danger');
       setSuccessMessage(feedbackMode === 'confirmar'
         ? 'Conclusao confirmada com sucesso.'
         : 'Conclusao contestada. O relato foi reaberto.');
@@ -314,6 +316,7 @@ export function ReportDetailPage() {
       setMotivo('SPAM');
       setComentarioAlvo(null);
       setIsReportOpen(false);
+      setSuccessTone('success');
       setSuccessMessage(comentarioAlvo ? 'Comentario sinalizado para a moderacao.' : 'Sinalizacao enviada para a moderacao.');
     } catch (err) {
       setActionError(getApiErrorMessage(err));
@@ -335,6 +338,7 @@ export function ReportDetailPage() {
         ...current,
         quantidadeComentarios: Math.max(0, current.quantidadeComentarios - 1),
       } : current);
+      setSuccessTone('success');
       setSuccessMessage('Comentario removido.');
     } catch (err) {
       setActionError(getApiErrorMessage(err));
@@ -442,7 +446,11 @@ export function ReportDetailPage() {
           )}
 
           {successMessage && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm">
+            <div className={`rounded-xl px-4 py-3 text-sm border ${
+              successTone === 'danger'
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            }`}>
               {successMessage}
             </div>
           )}

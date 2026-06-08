@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mykael.prefeitura.core.categoria.Categoria;
@@ -140,6 +141,25 @@ class PermissaoPorPerfilIntegrationTest {
 	}
 
 	@Test
+	void devePermitirAdminPrefeituraListarVinculosDaSuaCidade() throws Exception {
+		Usuario adminPrefeitura = usuario(PerfilUsuario.MORADOR);
+		Usuario operadorSecretaria = usuario(PerfilUsuario.MORADOR);
+		Usuario adminOutraPrefeitura = usuario(PerfilUsuario.MORADOR);
+		Organizacao prefeitura = prefeitura();
+		Organizacao secretaria = secretaria(prefeitura);
+		Organizacao outraPrefeitura = prefeitura("Campina Grande");
+
+		vinculo(adminPrefeitura, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+		vinculo(operadorSecretaria, secretaria, PapelUsuario.ADMIN_SECRETARIA);
+		vinculo(adminOutraPrefeitura, outraPrefeitura, PapelUsuario.ADMIN_PREFEITURA);
+
+		mockMvc.perform(get("/api/vinculos")
+						.with(jwtUsuario(adminPrefeitura, "MORADOR", "ADMIN_PREFEITURA")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)));
+	}
+
+	@Test
 	void deveBloquearMoradorNoFluxoOperacional() throws Exception {
 		Usuario morador = usuario(PerfilUsuario.MORADOR);
 
@@ -229,11 +249,15 @@ class PermissaoPorPerfilIntegrationTest {
 	}
 
 	private Organizacao prefeitura() {
+		return prefeitura("Joao Pessoa");
+	}
+
+	private Organizacao prefeitura(String cidade) {
 		int numero = SEQUENCIA.incrementAndGet();
 		Organizacao prefeitura = new Organizacao();
 		prefeitura.setNome("Prefeitura Teste " + numero);
 		prefeitura.setTipo(TipoOrganizacao.PREFEITURA);
-		prefeitura.setCidade("Joao Pessoa");
+		prefeitura.setCidade(cidade);
 		prefeitura.setEstado("PB");
 		prefeitura.setVerificada(true);
 		return organizacaoRepository.save(prefeitura);

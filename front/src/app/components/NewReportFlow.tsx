@@ -201,7 +201,7 @@ export function NewReportFlow({ onClose, onCreated, onViewReport }: NewReportFlo
       return;
     }
 
-    if (selectedBairro?.centroideLatitude !== null && selectedBairro?.centroideLongitude !== null) {
+    if (selectedBairro && selectedBairro.centroideLatitude !== null && selectedBairro.centroideLongitude !== null) {
       setLatitude(selectedBairro.centroideLatitude);
       setLongitude(selectedBairro.centroideLongitude);
       setLocationError(null);

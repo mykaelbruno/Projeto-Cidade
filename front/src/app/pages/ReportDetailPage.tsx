@@ -101,6 +101,10 @@ function timelineTitle(evento: TimelineDenunciaResponseDTO): string {
   return labels[evento.tipo] ?? evento.tipo;
 }
 
+function isTimelineDangerEvent(evento: TimelineDenunciaResponseDTO): boolean {
+  return evento.tipo === 'CONCLUSAO_CONTESTADA_MORADOR';
+}
+
 function formatOrganizationName(name: string | null | undefined, cidade: string): string {
   if (!name) {
     return '';
@@ -659,16 +663,28 @@ export function ReportDetailPage() {
                     <div key={evento.id} className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          evento.destaque ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                          isTimelineDangerEvent(evento)
+                            ? 'bg-red-100 text-red-700'
+                            : evento.destaque
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted text-muted-foreground'
                         }`}>
                           {evento.destaque ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
                         </div>
                         {index < timeline.length - 1 && <div className="w-0.5 h-full min-h-10 bg-border" />}
                       </div>
                       <div className="flex-1 pb-5">
-                        <div className="font-medium text-foreground mb-1">{timelineTitle(evento)}</div>
+                        <div className={`font-medium mb-1 ${
+                          isTimelineDangerEvent(evento) ? 'text-red-700' : 'text-foreground'
+                        }`}>
+                          {timelineTitle(evento)}
+                        </div>
                         <div className="text-xs text-muted-foreground mb-2">{timeAgo(evento.criadoEm)}</div>
-                        <p className="text-sm text-foreground">{evento.descricao}</p>
+                        <p className={`text-sm ${
+                          isTimelineDangerEvent(evento) ? 'text-red-700' : 'text-foreground'
+                        }`}>
+                          {evento.descricao}
+                        </p>
                         {(evento.organizacaoNome || evento.usuarioNome) && (
                           <p className="text-xs text-muted-foreground mt-2">
                             {evento.organizacaoNome

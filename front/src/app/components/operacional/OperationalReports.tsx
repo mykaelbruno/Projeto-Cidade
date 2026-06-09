@@ -49,7 +49,6 @@ interface OperationalReportsProps {
 type StatusFiltro = StatusDenuncia | 'TODOS';
 type CategoriaFiltro = string;
 type PaginacaoPorGrupo = Record<number, number>;
-type PaginasPorGrupo = Record<number, PageResponse<DenunciaResponseDTO>>;
 
 export function OperationalReports({ modo }: OperationalReportsProps) {
   const navigate = useNavigate();
@@ -60,6 +59,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
   );
 
   const [denuncias, setDenuncias] = useState<DenunciaResponseDTO[]>([]);
+  const [denunciasPrefeitura, setDenunciasPrefeitura] = useState<DenunciaResponseDTO[]>([]);
   const [paginaDenuncias, setPaginaDenuncias] = useState<PageResponse<DenunciaResponseDTO> | null>(null);
   const [categorias, setCategorias] = useState<CategoriaResponseDTO[]>([]);
   const [organizacoes, setOrganizacoes] = useState<OrganizacaoResponseDTO[]>([]);
@@ -81,7 +81,6 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
   const [paginaAtual, setPaginaAtual] = useState(0);
   const [tamanhoPagina, setTamanhoPagina] = useState(20);
   const [quantidadePorSecretaria, setQuantidadePorSecretaria] = useState(6);
-  const [paginasPorSecretaria, setPaginasPorSecretaria] = useState<PaginasPorGrupo>({});
   const [paginaAtualPorSecretaria, setPaginaAtualPorSecretaria] = useState<PaginacaoPorGrupo>({});
 
   const [denunciaSelecionada, setDenunciaSelecionada] = useState<DenunciaResponseDTO | null>(null);
@@ -136,30 +135,27 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
       setTransferencias(paginaTransferencias.content);
 
       if (modo === 'prefeitura') {
-        const secretariasDaPrefeitura = listaOrganizacoes.filter(
-          (organizacao) =>
-            organizacao.tipo === 'SECRETARIA' &&
-            organizacao.ativa &&
-            organizacao.organizacaoPaiId === vinculo.organizacaoId,
-        );
+        const tamanhoLote = 100;
+        let paginaConsulta = 0;
+        let ultimaPagina = false;
+        const denunciasFiltradas: DenunciaResponseDTO[] = [];
 
-        const paginas = await Promise.all(
-          secretariasDaPrefeitura.map(async (secretaria) => {
-            const pagina = await operacionalService.listarDenuncias(vinculo.organizacaoId, {
-              bairro: filtrosAplicados.bairro,
-              status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
-              categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
-              organizacaoResponsavelId: secretaria.id,
-              termo: filtrosAplicados.busca,
-              page: paginaAtualPorSecretaria[secretaria.id] ?? 0,
-              size: quantidadePorSecretaria,
-            });
+        while (!ultimaPagina) {
+          const pagina = await operacionalService.listarDenuncias(vinculo.organizacaoId, {
+            bairro: filtrosAplicados.bairro,
+            status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
+            categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
+            termo: filtrosAplicados.busca,
+            page: paginaConsulta,
+            size: tamanhoLote,
+          });
 
-            return [secretaria.id, pagina] as const;
-          }),
-        );
+          denunciasFiltradas.push(...pagina.content);
+          ultimaPagina = pagina.last;
+          paginaConsulta += 1;
+        }
 
-        setPaginasPorSecretaria(Object.fromEntries(paginas));
+        setDenunciasPrefeitura(denunciasFiltradas);
         setDenuncias([]);
         setPaginaDenuncias(null);
       } else {
@@ -172,6 +168,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
           size: tamanhoPagina,
         });
 
+        setDenunciasPrefeitura([]);
         setDenuncias(paginaDenuncias.content);
         setPaginaDenuncias(paginaDenuncias);
       }
@@ -184,8 +181,6 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     filtrosAplicados,
     modo,
     paginaAtual,
-    paginaAtualPorSecretaria,
-    quantidadePorSecretaria,
     tamanhoPagina,
     vinculo,
   ]);
@@ -205,14 +200,36 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
       }];
     }
 
-    return secretarias.map((secretaria) => ({
-      chave: String(secretaria.id),
-      organizacaoId: secretaria.id,
-      nome: secretaria.nome,
-      itens: paginasPorSecretaria[secretaria.id]?.content ?? [],
-      pagina: paginasPorSecretaria[secretaria.id] ?? null,
-    }));
-  }, [denuncias, modo, paginaDenuncias, paginasPorSecretaria, secretarias, vinculo]);
+    return secretarias.map((secretaria) => {
+      const relatosDaSecretaria = denunciasPrefeitura.filter(
+        (denuncia) => denuncia.organizacaoResponsavelId === secretaria.id,
+      );
+      const paginaAtualGrupo = paginaAtualPorSecretaria[secretaria.id] ?? 0;
+      const totalElements = relatosDaSecretaria.length;
+      const totalPages = totalElements === 0 ? 0 : Math.ceil(totalElements / quantidadePorSecretaria);
+      const paginaSegura = totalPages === 0 ? 0 : Math.min(paginaAtualGrupo, totalPages - 1);
+      const inicio = paginaSegura * quantidadePorSecretaria;
+      const fim = inicio + quantidadePorSecretaria;
+      const itensPagina = relatosDaSecretaria.slice(inicio, fim);
+
+      return {
+        chave: String(secretaria.id),
+        organizacaoId: secretaria.id,
+        nome: secretaria.nome,
+        itens: itensPagina,
+        pagina: {
+          content: itensPagina,
+          totalElements,
+          totalPages,
+          size: quantidadePorSecretaria,
+          number: paginaSegura,
+          first: paginaSegura === 0,
+          last: totalPages === 0 || paginaSegura >= totalPages - 1,
+          numberOfElements: itensPagina.length,
+        } satisfies PageResponse<DenunciaResponseDTO>,
+      };
+    });
+  }, [denuncias, denunciasPrefeitura, modo, paginaAtualPorSecretaria, paginaDenuncias, quantidadePorSecretaria, secretarias, vinculo]);
 
   const existeFiltroAtivo = useMemo(
     () =>

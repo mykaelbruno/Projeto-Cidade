@@ -5,8 +5,12 @@ import com.mykael.prefeitura.core.painel.dto.ContadoresDenunciaDTO;
 import com.mykael.prefeitura.core.painel.dto.DistribuicaoDenunciaDTO;
 import com.mykael.prefeitura.core.painel.dto.IndicadoresOperacionaisDTO;
 import jakarta.persistence.EntityManager;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
@@ -24,7 +28,7 @@ public class PainelOperacionalRepository {
 	}
 
 	public ContadoresDenunciaDTO contarDenunciasDaSecretaria(Long secretariaId) {
-		return contar("where d.organizacaoResponsavel.id = :organizacaoId", secretariaId);
+		return contar(filtroSecretaria(), secretariaId);
 	}
 
 	public IndicadoresOperacionaisDTO calcularIndicadoresDaPrefeitura(Long prefeituraId) {
@@ -32,7 +36,7 @@ public class PainelOperacionalRepository {
 	}
 
 	public IndicadoresOperacionaisDTO calcularIndicadoresDaSecretaria(Long secretariaId) {
-		return calcularIndicadores("where d.organizacaoResponsavel.id = :organizacaoId", secretariaId);
+		return calcularIndicadores(filtroSecretaria(), secretariaId);
 	}
 
 	public List<DistribuicaoDenunciaDTO> listarBairrosDaPrefeitura(Long prefeituraId, int limite) {
@@ -47,7 +51,7 @@ public class PainelOperacionalRepository {
 	public List<DistribuicaoDenunciaDTO> listarBairrosDaSecretaria(Long secretariaId, int limite) {
 		return listarDistribuicao(
 				"d.bairro",
-				"where d.organizacaoResponsavel.id = :organizacaoId",
+				filtroSecretaria(),
 				secretariaId,
 				limite
 		);
@@ -65,7 +69,7 @@ public class PainelOperacionalRepository {
 	public List<DistribuicaoDenunciaDTO> listarCategoriasDaSecretaria(Long secretariaId, int limite) {
 		return listarDistribuicao(
 				"d.categoria.nome",
-				"where d.organizacaoResponsavel.id = :organizacaoId",
+				filtroSecretaria(),
 				secretariaId,
 				limite
 		);
@@ -149,7 +153,7 @@ public class PainelOperacionalRepository {
 		}
 
 		double mediaHoras = rows.stream()
-				.mapToLong(row -> Duration.between((Instant) row[0], (Instant) row[1]).toMinutes())
+				.mapToLong(row -> Duration.between(toInstant(row[0]), toInstant(row[1])).toMinutes())
 				.average()
 				.orElse(0.0) / 60.0;
 		return Math.round(mediaHoras * 100.0) / 100.0;
@@ -173,7 +177,7 @@ public class PainelOperacionalRepository {
 				.getResultList();
 
 		return rows.stream()
-				.map(row -> new DistribuicaoDenunciaDTO((String) row[0], toLong(row[1])))
+				.map(row -> new DistribuicaoDenunciaDTO(normalizarNomeDistribuicao(row[0]), toLong(row[1])))
 				.toList();
 	}
 
@@ -186,6 +190,13 @@ public class PainelOperacionalRepository {
 				""";
 	}
 
+	private String filtroSecretaria() {
+		return """
+				join d.organizacaoResponsavel organizacao
+				where organizacao.id = :organizacaoId
+				""";
+	}
+
 	private double calcularTaxa(long parte, long total) {
 		if (total == 0) {
 			return 0.0;
@@ -195,5 +206,34 @@ public class PainelOperacionalRepository {
 
 	private long toLong(Object value) {
 		return ((Number) value).longValue();
+	}
+
+	private String normalizarNomeDistribuicao(Object value) {
+		if (value == null) {
+			return "Nao informado";
+		}
+
+		String texto = String.valueOf(value).trim();
+		return texto.isEmpty() ? "Nao informado" : texto;
+	}
+
+	private Instant toInstant(Object value) {
+		if (value instanceof Instant instant) {
+			return instant;
+		}
+		if (value instanceof OffsetDateTime offsetDateTime) {
+			return offsetDateTime.toInstant();
+		}
+		if (value instanceof LocalDateTime localDateTime) {
+			return localDateTime.toInstant(ZoneOffset.UTC);
+		}
+		if (value instanceof Timestamp timestamp) {
+			return timestamp.toInstant();
+		}
+		if (value instanceof java.util.Date date) {
+			return date.toInstant();
+		}
+
+		throw new IllegalStateException("Tipo temporal inesperado no painel operacional: " + value);
 	}
 }

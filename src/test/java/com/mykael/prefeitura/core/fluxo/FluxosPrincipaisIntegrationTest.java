@@ -363,6 +363,40 @@ class FluxosPrincipaisIntegrationTest {
 	}
 
 	@Test
+	void deveRetornarResumoOperacionalDaSecretaria() throws Exception {
+		Usuario adminSecretaria = usuario(PerfilUsuario.MORADOR);
+		Organizacao prefeitura = prefeitura();
+		Organizacao secretaria = secretaria(prefeitura);
+		vinculo(adminSecretaria, secretaria, PapelUsuario.ADMIN_SECRETARIA);
+		Categoria categoria = categoria(secretaria);
+
+		Denuncia concluidaConfirmada = denunciaComResponsavel(secretaria);
+		concluidaConfirmada.setCategoria(categoria);
+		concluidaConfirmada.setBairro("Centro");
+		concluidaConfirmada.setStatus(StatusDenuncia.CONCLUIDO);
+		concluidaConfirmada.confirmarConclusao("Resolvido pela secretaria.");
+		denunciaRepository.save(concluidaConfirmada);
+
+		Denuncia emAnalise = denunciaComResponsavel(secretaria);
+		emAnalise.setCategoria(categoria);
+		emAnalise.setBairro("Centro");
+		emAnalise.setStatus(StatusDenuncia.EM_ANALISE);
+		denunciaRepository.save(emAnalise);
+
+		mockMvc.perform(get("/api/paineis/operacional/organizacoes/{organizacaoId}/resumo", secretaria.getId())
+						.with(jwtUsuario(adminSecretaria, "MORADOR", "ADMIN_SECRETARIA")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.organizacaoId").value(secretaria.getId()))
+				.andExpect(jsonPath("$.tipoOrganizacao").value(TipoOrganizacao.SECRETARIA.name()))
+				.andExpect(jsonPath("$.denuncias.total").value(2))
+				.andExpect(jsonPath("$.denuncias.emAnalise").value(1))
+				.andExpect(jsonPath("$.denuncias.concluidasConfirmadas").value(1))
+				.andExpect(jsonPath("$.transferenciasPendentes").value(0))
+				.andExpect(jsonPath("$.bairrosMaisDemandados[0].nome").value("Centro"))
+				.andExpect(jsonPath("$.categoriasMaisDemandadas[0].nome").value(categoria.getNome()));
+	}
+
+	@Test
 	void deveExportarDenunciasOperacionaisEmCsvSemDadosDoAutor() throws Exception {
 		Usuario adminPrefeitura = usuario(PerfilUsuario.MORADOR);
 		Organizacao prefeitura = prefeitura();

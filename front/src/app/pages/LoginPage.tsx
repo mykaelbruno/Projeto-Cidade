@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useMemo, useState } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -9,12 +9,27 @@ import { getApiErrorMessage } from '../services/apiClient';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useUser();
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const redirectPath = searchParams.get('redirect');
+  const loginReason = searchParams.get('motivo');
+  const helperMessage = useMemo(() => {
+    if (loginReason === 'expired') {
+      return 'Sua sessao expirou. Entre novamente para continuar de onde parou.';
+    }
+
+    if (loginReason === 'required') {
+      return 'Faca login para acessar esta area do sistema.';
+    }
+
+    return null;
+  }, [loginReason]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +42,9 @@ export function LoginPage() {
         senha: password,
       });
 
-      navigate(getHomePathByUserType(session.userType), { replace: true });
+      const fallbackPath = getHomePathByUserType(session.userType);
+      const nextPath = redirectPath && redirectPath.startsWith('/') ? redirectPath : fallbackPath;
+      navigate(nextPath, { replace: true });
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));
     } finally {
@@ -65,6 +82,12 @@ export function LoginPage() {
 
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-4">
             <form onSubmit={handleLogin} className="space-y-4">
+              {helperMessage && (
+                <div className="rounded-xl border border-amber-300/40 bg-amber-500/20 px-4 py-3 text-sm text-white">
+                  {helperMessage}
+                </div>
+              )}
+
               <div>
                 <Label className="text-sm font-semibold text-white mb-2 block">
                   E-mail ou nome de usuario

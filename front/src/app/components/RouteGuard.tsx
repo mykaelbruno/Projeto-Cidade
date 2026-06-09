@@ -1,6 +1,7 @@
 import { ReactNode, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { getHomePathByUserType, useUser, UserType } from '../contexts/UserContext';
+import { buildLoginRedirectPath } from '../utils/authNavigation';
 
 interface RouteGuardProps {
   children: ReactNode;
@@ -10,6 +11,7 @@ interface RouteGuardProps {
 export function RouteGuard({ children, allowedRoles }: RouteGuardProps) {
   const { isAuthenticated, isLoading, userType, hasUserType, setUserType } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const hasPermission = allowedRoles.some((role) => hasUserType(role));
   const isActiveRoleAllowed = allowedRoles.includes(userType);
 
@@ -19,7 +21,8 @@ export function RouteGuard({ children, allowedRoles }: RouteGuardProps) {
     }
 
     if (!isAuthenticated) {
-      navigate('/', { replace: true });
+      const redirectPath = `${location.pathname}${location.search}${location.hash}`;
+      navigate(buildLoginRedirectPath(redirectPath, 'required'), { replace: true });
       return;
     }
 
@@ -34,7 +37,7 @@ export function RouteGuard({ children, allowedRoles }: RouteGuardProps) {
         setUserType(nextUserType);
       }
     }
-  }, [allowedRoles, hasPermission, hasUserType, isAuthenticated, isLoading, navigate, setUserType, userType]);
+  }, [allowedRoles, hasPermission, hasUserType, isAuthenticated, isLoading, location.hash, location.pathname, location.search, navigate, setUserType, userType]);
 
   if (isLoading || !isAuthenticated || !hasPermission || !isActiveRoleAllowed) {
     return null;

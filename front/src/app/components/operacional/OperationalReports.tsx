@@ -21,7 +21,7 @@ import { organizacaoService } from '../../services/organizacaoService';
 import type { PageResponse } from '../../types/api';
 import type { CategoriaResponseDTO } from '../../types/categoria';
 import type { DenunciaResponseDTO, StatusDenuncia } from '../../types/denuncia';
-import type { OrganizacaoResponseDTO } from '../../types/organizacao';
+import type { BairroResponseDTO, OrganizacaoResponseDTO } from '../../types/organizacao';
 import type { SolicitacaoTransferenciaResponseDTO } from '../../types/operacional';
 import { getOperationalPathPrefix, getVinculoOperacionalAtivo } from '../../utils/operacionalContext';
 import { Badge } from '../ui/badge';
@@ -61,6 +61,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
   const [denuncias, setDenuncias] = useState<DenunciaResponseDTO[]>([]);
   const [denunciasPrefeitura, setDenunciasPrefeitura] = useState<DenunciaResponseDTO[]>([]);
   const [paginaDenuncias, setPaginaDenuncias] = useState<PageResponse<DenunciaResponseDTO> | null>(null);
+  const [bairrosDisponiveis, setBairrosDisponiveis] = useState<BairroResponseDTO[]>([]);
   const [categorias, setCategorias] = useState<CategoriaResponseDTO[]>([]);
   const [organizacoes, setOrganizacoes] = useState<OrganizacaoResponseDTO[]>([]);
   const [transferencias, setTransferencias] = useState<SolicitacaoTransferenciaResponseDTO[]>([]);
@@ -111,6 +112,27 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     );
   }, [organizacoes, vinculo]);
 
+  const opcoesDeBairro = useMemo(() => {
+    if (bairrosDisponiveis.length > 0) {
+      return bairrosDisponiveis
+        .filter((bairroAtual) => bairroAtual.ativo)
+        .map((bairroAtual) => bairroAtual.nome)
+        .sort((bairroA, bairroB) => bairroA.localeCompare(bairroB, 'pt-BR'));
+    }
+
+    const nomes = new Set(
+      (modo === 'prefeitura' ? denunciasPrefeitura : denuncias)
+        .map((denuncia) => denuncia.bairro?.trim())
+        .filter((bairroAtual): bairroAtual is string => Boolean(bairroAtual)),
+    );
+
+    if (bairro.trim()) {
+      nomes.add(bairro.trim());
+    }
+
+    return Array.from(nomes).sort((bairroA, bairroB) => bairroA.localeCompare(bairroB, 'pt-BR'));
+  }, [bairro, bairrosDisponiveis, denuncias, denunciasPrefeitura, modo]);
+
   const carregarDados = useCallback(async () => {
     if (!vinculo) {
       setErro('Nao foi possivel carregar seu vinculo operacional. Tente entrar novamente.');
@@ -122,17 +144,21 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     setErro(null);
 
     try {
-      const [listaCategorias, listaOrganizacoes, paginaTransferencias] = await Promise.all([
+      const [listaCategorias, listaOrganizacoes, paginaTransferencias, listaBairros] = await Promise.all([
         categoriaService.listar(),
         modo === 'prefeitura' ? organizacaoService.listar() : Promise.resolve([]),
         modo === 'prefeitura'
           ? operacionalService.listarTransferenciasPrefeitura(vinculo.organizacaoId)
           : Promise.resolve({ content: [] }),
+        modo === 'prefeitura'
+          ? organizacaoService.listarBairrosParaGestao(vinculo.organizacaoId)
+          : Promise.resolve([]),
       ]);
 
       setCategorias(listaCategorias.filter((categoria) => categoria.ativa));
       setOrganizacoes(listaOrganizacoes);
       setTransferencias(paginaTransferencias.content);
+      setBairrosDisponiveis(listaBairros);
 
       if (modo === 'prefeitura') {
         const tamanhoLote = 100;
@@ -523,12 +549,22 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
 
       <Card className="shadow-sm">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="relative xl:col-span-2">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,2.2fr)_minmax(180px,0.95fr)_minmax(180px,1fr)_minmax(200px,1fr)_auto_auto] xl:items-center">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar por titulo, bairro ou ID..." className="pl-9 border-slate-300 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20" />
             </div>
-            <Input value={bairro} onChange={(event) => setBairro(event.target.value)} placeholder="Bairro" className="border-slate-300 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20" />
+            <Select value={bairro || 'TODOS_BAIRROS'} onValueChange={(value) => setBairro(value === 'TODOS_BAIRROS' ? '' : value)}>
+              <SelectTrigger className="border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-primary/20">
+                <SelectValue placeholder="Bairro" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS_BAIRROS">Todos os bairros</SelectItem>
+                {opcoesDeBairro.map((bairroAtual) => (
+                  <SelectItem key={bairroAtual} value={bairroAtual}>{bairroAtual}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={status} onValueChange={(value) => setStatus(value as StatusFiltro)}>
               <SelectTrigger className="border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-primary/20"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
@@ -547,10 +583,8 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <Button variant="outline" onClick={aplicarFiltros}>Aplicar filtros</Button>
-            <Button variant="ghost" onClick={limparFiltros}>Limpar</Button>
+            <Button variant="outline" onClick={aplicarFiltros} className="w-full xl:w-auto">Aplicar filtros</Button>
+            <Button variant="ghost" onClick={limparFiltros} className="w-full xl:w-auto">Limpar</Button>
           </div>
         </CardContent>
       </Card>

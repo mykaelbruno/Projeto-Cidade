@@ -12,6 +12,8 @@ Refinei a barra de filtros da pagina de relatos da prefeitura para ficar mais co
 - O estado vazio continua aparecendo normalmente quando nenhum relato atende aos filtros.
 - O agrupamento da prefeitura passou a usar uma base filtrada unica e depois separar os relatos por secretaria no frontend.
 - A paginacao de cada dropdown agora e aplicada apenas sobre os relatos da propria secretaria, sem misturar cards de outros grupos.
+- O filtro de `bairro` deixou de ser digitado livremente e passou a usar uma lista de selecao com os bairros disponiveis.
+- No desktop, toda a barra de filtros foi reorganizada para caber em uma unica linha, mantendo o mobile empilhado.
 
 ## Resultado esperado
 
@@ -19,6 +21,7 @@ Refinei a barra de filtros da pagina de relatos da prefeitura para ficar mais co
 - O usuario nao precisa percorrer varias secretarias vazias depois de filtrar.
 - O comportamento da tela combina melhor com o modelo de dropdown por secretaria.
 - Cada secretaria exibe apenas seus proprios relatos, inclusive ao paginar dentro do dropdown.
+- O preenchimento de bairro fica mais consistente e rapido para o operador.
 
 ## Arquivo envolvido
 

@@ -317,7 +317,7 @@ export function AdministracaoPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <Card className="p-8 text-center text-sm text-muted-foreground">
           Carregando administracao da prefeitura...
         </Card>
@@ -327,7 +327,7 @@ export function AdministracaoPage() {
 
   if (!prefeituraId || !prefeitura) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <Card className="p-8 text-center">
           <h2 className="text-xl font-semibold">Administracao</h2>
           <p className="mt-2 text-sm text-red-600">{erro ?? 'Prefeitura nao encontrada para seu vinculo atual.'}</p>

@@ -227,7 +227,7 @@ export function ModeradorPage() {
 
   if (carregando) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <Card className="p-8 text-center text-sm text-muted-foreground">
           Carregando painel de moderacao...
         </Card>

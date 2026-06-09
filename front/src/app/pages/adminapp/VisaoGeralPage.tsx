@@ -147,7 +147,7 @@ export function VisaoGeralPage() {
   }, [categorias, organizacoes, resumoModeracao, usuarios]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-display font-bold text-foreground">

@@ -6,6 +6,7 @@ import { Label } from '../components/ui/label';
 import { Handshake, Eye, EyeOff, Building2, Mail } from 'lucide-react';
 import { getHomePathByUserType, useUser } from '../contexts/UserContext';
 import { getApiErrorMessage } from '../services/apiClient';
+import { isRedirectPathCompatible } from '../utils/authNavigation';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -43,7 +44,9 @@ export function LoginPage() {
       });
 
       const fallbackPath = getHomePathByUserType(session.userType);
-      const nextPath = redirectPath && redirectPath.startsWith('/') ? redirectPath : fallbackPath;
+      const nextPath = isRedirectPathCompatible(session.userType, redirectPath)
+        ? redirectPath!
+        : fallbackPath;
       navigate(nextPath, { replace: true });
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));

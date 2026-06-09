@@ -183,9 +183,12 @@ export function UserProvider({ children }: UserProviderProps) {
         throw new Error('Nao foi possivel carregar sua sessao apos o login.');
       }
 
+      const preferredUserType = pickInitialUserType(getAvailableUserTypes(currentSession));
+      setActiveUserType(preferredUserType);
+
       return {
         session: currentSession,
-        userType: pickInitialUserType(getAvailableUserTypes(currentSession)),
+        userType: preferredUserType,
       };
     },
     [refreshSession],

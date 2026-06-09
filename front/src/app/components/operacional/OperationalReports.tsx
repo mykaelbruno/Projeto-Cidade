@@ -64,13 +64,11 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
   const [categorias, setCategorias] = useState<CategoriaResponseDTO[]>([]);
   const [organizacoes, setOrganizacoes] = useState<OrganizacaoResponseDTO[]>([]);
   const [transferencias, setTransferencias] = useState<SolicitacaoTransferenciaResponseDTO[]>([]);
-  const [cidade, setCidade] = useState('');
   const [bairro, setBairro] = useState('');
   const [busca, setBusca] = useState('');
   const [status, setStatus] = useState<StatusFiltro>('TODOS');
   const [categoriaId, setCategoriaId] = useState<CategoriaFiltro>('TODAS');
   const [filtrosAplicados, setFiltrosAplicados] = useState({
-    cidade: '',
     bairro: '',
     busca: '',
     status: 'TODOS' as StatusFiltro,
@@ -148,7 +146,6 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
         const paginas = await Promise.all(
           secretariasDaPrefeitura.map(async (secretaria) => {
             const pagina = await operacionalService.listarDenuncias(vinculo.organizacaoId, {
-              cidade: filtrosAplicados.cidade,
               bairro: filtrosAplicados.bairro,
               status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
               categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
@@ -167,7 +164,6 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
         setPaginaDenuncias(null);
       } else {
         const paginaDenuncias = await operacionalService.listarDenuncias(vinculo.organizacaoId, {
-          cidade: filtrosAplicados.cidade,
           bairro: filtrosAplicados.bairro,
           status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
           categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
@@ -218,13 +214,32 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     }));
   }, [denuncias, modo, paginaDenuncias, paginasPorSecretaria, secretarias, vinculo]);
 
+  const existeFiltroAtivo = useMemo(
+    () =>
+      Boolean(
+        filtrosAplicados.bairro ||
+        filtrosAplicados.busca ||
+        filtrosAplicados.status !== 'TODOS' ||
+        filtrosAplicados.categoriaId !== 'TODAS',
+      ),
+    [filtrosAplicados],
+  );
+
+  const gruposVisiveis = useMemo(() => {
+    if (modo !== 'prefeitura' || !existeFiltroAtivo) {
+      return grupos;
+    }
+
+    return grupos.filter((grupo) => (grupo.pagina?.totalElements ?? 0) > 0);
+  }, [existeFiltroAtivo, grupos, modo]);
+
   const totalRelatosVisiveis = useMemo(() => {
     if (modo === 'prefeitura') {
-      return grupos.reduce((total, grupo) => total + (grupo.pagina?.totalElements ?? 0), 0);
+      return gruposVisiveis.reduce((total, grupo) => total + (grupo.pagina?.totalElements ?? 0), 0);
     }
 
     return paginaDenuncias?.totalElements ?? denuncias.length;
-  }, [denuncias.length, grupos, modo, paginaDenuncias]);
+  }, [denuncias.length, gruposVisiveis, modo, paginaDenuncias]);
 
   function getOrganizacaoAcaoId(denuncia: DenunciaResponseDTO) {
     return vinculo?.organizacaoId ?? denuncia.organizacaoResponsavelId ?? 0;
@@ -352,7 +367,6 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
 
     try {
       const blob = await operacionalService.baixarCsv(vinculo.organizacaoId, {
-        cidade: filtrosAplicados.cidade,
         bairro: filtrosAplicados.bairro,
         status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
         categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
@@ -373,7 +387,6 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     setPaginaAtual(0);
     setPaginaAtualPorSecretaria({});
     setFiltrosAplicados({
-      cidade: cidade.trim(),
       bairro: bairro.trim(),
       busca: busca.trim(),
       status,
@@ -382,7 +395,6 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
   }
 
   function limparFiltros() {
-    setCidade('');
     setBairro('');
     setBusca('');
     setStatus('TODOS');
@@ -390,7 +402,6 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     setPaginaAtual(0);
     setPaginaAtualPorSecretaria({});
     setFiltrosAplicados({
-      cidade: '',
       bairro: '',
       busca: '',
       status: 'TODOS',
@@ -495,12 +506,11 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
 
       <Card className="shadow-sm">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="relative xl:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar por titulo, bairro ou ID..." className="pl-9 border-slate-300 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20" />
             </div>
-            <Input value={cidade} onChange={(event) => setCidade(event.target.value)} placeholder="Cidade" className="border-slate-300 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20" />
             <Input value={bairro} onChange={(event) => setBairro(event.target.value)} placeholder="Bairro" className="border-slate-300 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20" />
             <Select value={status} onValueChange={(value) => setStatus(value as StatusFiltro)}>
               <SelectTrigger className="border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-primary/20"><SelectValue placeholder="Status" /></SelectTrigger>
@@ -521,7 +531,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex items-center gap-2">
             <Button variant="outline" onClick={aplicarFiltros}>Aplicar filtros</Button>
             <Button variant="ghost" onClick={limparFiltros}>Limpar</Button>
           </div>
@@ -537,7 +547,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
       <div className="space-y-7">
         {modo === 'prefeitura' ? (
           <Accordion type="multiple" className="space-y-4">
-            {grupos.map((grupo, index) => (
+            {gruposVisiveis.map((grupo, index) => (
               <AccordionItem
                 key={grupo.chave}
                 value={`${grupo.chave}-${index}`}

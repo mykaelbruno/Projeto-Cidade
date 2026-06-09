@@ -48,6 +48,8 @@ interface OperationalReportsProps {
 
 type StatusFiltro = StatusDenuncia | 'TODOS';
 type CategoriaFiltro = string;
+type PaginacaoPorGrupo = Record<number, number>;
+type PaginasPorGrupo = Record<number, PageResponse<DenunciaResponseDTO>>;
 
 export function OperationalReports({ modo }: OperationalReportsProps) {
   const navigate = useNavigate();
@@ -80,6 +82,9 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
   const [processando, setProcessando] = useState(false);
   const [paginaAtual, setPaginaAtual] = useState(0);
   const [tamanhoPagina, setTamanhoPagina] = useState(20);
+  const [quantidadePorSecretaria, setQuantidadePorSecretaria] = useState(6);
+  const [paginasPorSecretaria, setPaginasPorSecretaria] = useState<PaginasPorGrupo>({});
+  const [paginaAtualPorSecretaria, setPaginaAtualPorSecretaria] = useState<PaginacaoPorGrupo>({});
 
   const [denunciaSelecionada, setDenunciaSelecionada] = useState<DenunciaResponseDTO | null>(null);
   const [statusAberto, setStatusAberto] = useState(false);
@@ -120,55 +125,106 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     setErro(null);
 
     try {
-      const [paginaDenuncias, listaCategorias, listaOrganizacoes, paginaTransferencias] =
-        await Promise.all([
-          operacionalService.listarDenuncias(vinculo.organizacaoId, {
-            cidade: filtrosAplicados.cidade,
-            bairro: filtrosAplicados.bairro,
-            status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
-            categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
-            termo: filtrosAplicados.busca,
-            page: paginaAtual,
-            size: tamanhoPagina,
-          }),
-          categoriaService.listar(),
-          modo === 'prefeitura' ? organizacaoService.listar() : Promise.resolve([]),
-          modo === 'prefeitura'
-            ? operacionalService.listarTransferenciasPrefeitura(vinculo.organizacaoId)
-            : Promise.resolve({ content: [] }),
-        ]);
+      const [listaCategorias, listaOrganizacoes, paginaTransferencias] = await Promise.all([
+        categoriaService.listar(),
+        modo === 'prefeitura' ? organizacaoService.listar() : Promise.resolve([]),
+        modo === 'prefeitura'
+          ? operacionalService.listarTransferenciasPrefeitura(vinculo.organizacaoId)
+          : Promise.resolve({ content: [] }),
+      ]);
 
-      setDenuncias(paginaDenuncias.content);
-      setPaginaDenuncias(paginaDenuncias);
       setCategorias(listaCategorias.filter((categoria) => categoria.ativa));
       setOrganizacoes(listaOrganizacoes);
       setTransferencias(paginaTransferencias.content);
+
+      if (modo === 'prefeitura') {
+        const secretariasDaPrefeitura = listaOrganizacoes.filter(
+          (organizacao) =>
+            organizacao.tipo === 'SECRETARIA' &&
+            organizacao.ativa &&
+            organizacao.organizacaoPaiId === vinculo.organizacaoId,
+        );
+
+        const paginas = await Promise.all(
+          secretariasDaPrefeitura.map(async (secretaria) => {
+            const pagina = await operacionalService.listarDenuncias(vinculo.organizacaoId, {
+              cidade: filtrosAplicados.cidade,
+              bairro: filtrosAplicados.bairro,
+              status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
+              categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
+              organizacaoResponsavelId: secretaria.id,
+              termo: filtrosAplicados.busca,
+              page: paginaAtualPorSecretaria[secretaria.id] ?? 0,
+              size: quantidadePorSecretaria,
+            });
+
+            return [secretaria.id, pagina] as const;
+          }),
+        );
+
+        setPaginasPorSecretaria(Object.fromEntries(paginas));
+        setDenuncias([]);
+        setPaginaDenuncias(null);
+      } else {
+        const paginaDenuncias = await operacionalService.listarDenuncias(vinculo.organizacaoId, {
+          cidade: filtrosAplicados.cidade,
+          bairro: filtrosAplicados.bairro,
+          status: filtrosAplicados.status === 'TODOS' ? null : filtrosAplicados.status,
+          categoriaId: filtrosAplicados.categoriaId === 'TODAS' ? null : Number(filtrosAplicados.categoriaId),
+          termo: filtrosAplicados.busca,
+          page: paginaAtual,
+          size: tamanhoPagina,
+        });
+
+        setDenuncias(paginaDenuncias.content);
+        setPaginaDenuncias(paginaDenuncias);
+      }
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Nao foi possivel carregar os relatos operacionais.');
     } finally {
       setCarregando(false);
     }
-  }, [filtrosAplicados, modo, paginaAtual, tamanhoPagina, vinculo]);
+  }, [
+    filtrosAplicados,
+    modo,
+    paginaAtual,
+    paginaAtualPorSecretaria,
+    quantidadePorSecretaria,
+    tamanhoPagina,
+    vinculo,
+  ]);
 
   useEffect(() => {
     carregarDados();
   }, [carregarDados]);
 
-  const denunciasFiltradas = denuncias;
-
   const grupos = useMemo(() => {
     if (modo === 'secretaria') {
-      return [[vinculo?.nomeOrganizacao ?? 'Secretaria', denunciasFiltradas]] as [string, DenunciaResponseDTO[]][];
+      return [{
+        chave: String(vinculo?.organizacaoId ?? 'secretaria'),
+        organizacaoId: vinculo?.organizacaoId ?? 0,
+        nome: vinculo?.nomeOrganizacao ?? 'Secretaria',
+        itens: denuncias,
+        pagina: paginaDenuncias,
+      }];
     }
 
-    const agrupado = new Map<string, DenunciaResponseDTO[]>();
-    denunciasFiltradas.forEach((denuncia) => {
-      const chave = denuncia.organizacaoResponsavelNome ?? 'Sem secretaria definida';
-      agrupado.set(chave, [...(agrupado.get(chave) ?? []), denuncia]);
-    });
+    return secretarias.map((secretaria) => ({
+      chave: String(secretaria.id),
+      organizacaoId: secretaria.id,
+      nome: secretaria.nome,
+      itens: paginasPorSecretaria[secretaria.id]?.content ?? [],
+      pagina: paginasPorSecretaria[secretaria.id] ?? null,
+    }));
+  }, [denuncias, modo, paginaDenuncias, paginasPorSecretaria, secretarias, vinculo]);
 
-    return Array.from(agrupado.entries());
-  }, [denunciasFiltradas, modo, vinculo]);
+  const totalRelatosVisiveis = useMemo(() => {
+    if (modo === 'prefeitura') {
+      return grupos.reduce((total, grupo) => total + (grupo.pagina?.totalElements ?? 0), 0);
+    }
+
+    return paginaDenuncias?.totalElements ?? denuncias.length;
+  }, [denuncias.length, grupos, modo, paginaDenuncias]);
 
   function getOrganizacaoAcaoId(denuncia: DenunciaResponseDTO) {
     return vinculo?.organizacaoId ?? denuncia.organizacaoResponsavelId ?? 0;
@@ -315,6 +371,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
 
   function aplicarFiltros() {
     setPaginaAtual(0);
+    setPaginaAtualPorSecretaria({});
     setFiltrosAplicados({
       cidade: cidade.trim(),
       bairro: bairro.trim(),
@@ -331,6 +388,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
     setStatus('TODOS');
     setCategoriaId('TODAS');
     setPaginaAtual(0);
+    setPaginaAtualPorSecretaria({});
     setFiltrosAplicados({
       cidade: '',
       bairro: '',
@@ -440,12 +498,12 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
             <div className="relative xl:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar por titulo, bairro ou ID..." className="pl-9" />
+              <Input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar por titulo, bairro ou ID..." className="pl-9 border-slate-300 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20" />
             </div>
-            <Input value={cidade} onChange={(event) => setCidade(event.target.value)} placeholder="Cidade" />
-            <Input value={bairro} onChange={(event) => setBairro(event.target.value)} placeholder="Bairro" />
+            <Input value={cidade} onChange={(event) => setCidade(event.target.value)} placeholder="Cidade" className="border-slate-300 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20" />
+            <Input value={bairro} onChange={(event) => setBairro(event.target.value)} placeholder="Bairro" className="border-slate-300 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20" />
             <Select value={status} onValueChange={(value) => setStatus(value as StatusFiltro)}>
-              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger className="border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-primary/20"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODOS">Todos os status</SelectItem>
                 {statusDenunciaOptions.map((option) => (
@@ -454,7 +512,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
               </SelectContent>
             </Select>
             <Select value={categoriaId} onValueChange={setCategoriaId}>
-              <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
+              <SelectTrigger className="border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-primary/20"><SelectValue placeholder="Categoria" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODAS">Todas as categorias</SelectItem>
                 {categorias.map((categoria) => (
@@ -470,7 +528,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
         </CardContent>
       </Card>
 
-      {denunciasFiltradas.length === 0 && (
+      {totalRelatosVisiveis === 0 && (
         <Card className="p-8 text-center text-sm text-muted-foreground">
           Nenhum relato encontrado para os filtros atuais.
         </Card>
@@ -479,10 +537,10 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
       <div className="space-y-7">
         {modo === 'prefeitura' ? (
           <Accordion type="multiple" className="space-y-4">
-            {grupos.map(([nomeGrupo, items], index) => (
+            {grupos.map((grupo, index) => (
               <AccordionItem
-                key={nomeGrupo}
-                value={`${nomeGrupo}-${index}`}
+                key={grupo.chave}
+                value={`${grupo.chave}-${index}`}
                 className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
               >
                 <AccordionTrigger className="px-4 py-4 hover:no-underline [&>svg]:shrink-0">
@@ -491,45 +549,85 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
                       <Building2 className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="truncate font-semibold text-foreground">{nomeGrupo}</h3>
+                      <h3 className="truncate font-semibold text-foreground">{grupo.nome}</h3>
                       <p className="text-sm text-muted-foreground">
-                        Clique para {items.length > 0 ? 'visualizar os relatos desta secretaria' : 'ver que nao ha relatos neste grupo'}.
+                        Clique para {((grupo.pagina?.totalElements ?? 0) > 0) ? 'visualizar os relatos desta secretaria' : 'ver que nao ha relatos neste grupo'}.
                       </p>
                     </div>
                     <Badge variant="secondary" className="ml-auto shrink-0">
-                      {items.length} {items.length === 1 ? 'relato' : 'relatos'}
+                      {grupo.pagina?.totalElements ?? 0} {(grupo.pagina?.totalElements ?? 0) === 1 ? 'relato' : 'relatos'}
                     </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="border-t border-border px-4 pb-4 pt-4">
-                  {items.length === 0 ? (
+                  {(grupo.pagina?.totalElements ?? 0) === 0 ? (
                     <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
                       Nenhum relato atribuido a esta secretaria no momento.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                      {items.map((denuncia) => (
-                        <ReportManagementCard
-                          key={denuncia.id}
-                          denuncia={denuncia}
-                          modo={modo}
-                          onDetalhes={() => navigate(`${prefix}/relato/${denuncia.id}`)}
-                          onStatus={() => abrirStatus(denuncia)}
-                          onResposta={() => abrirResposta(denuncia)}
-                          onTransferencia={() => {
-                            setDenunciaSelecionada(denuncia);
-                            setDestinoTransferencia('');
-                            setMotivoTransferencia('');
-                            setTransferenciaAberta(true);
-                          }}
-                          onReatribuicao={() => {
-                            setDenunciaSelecionada(denuncia);
-                            setDestinoReatribuicao('');
-                            setMotivoReatribuicao('');
-                            setReatribuicaoAberta(true);
-                          }}
-                        />
-                      ))}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                        {grupo.itens.map((denuncia) => (
+                          <ReportManagementCard
+                            key={denuncia.id}
+                            denuncia={denuncia}
+                            modo={modo}
+                            onDetalhes={() => navigate(`${prefix}/relato/${denuncia.id}`)}
+                            onStatus={() => abrirStatus(denuncia)}
+                            onResposta={() => abrirResposta(denuncia)}
+                            onTransferencia={() => {
+                              setDenunciaSelecionada(denuncia);
+                              setDestinoTransferencia('');
+                              setMotivoTransferencia('');
+                              setTransferenciaAberta(true);
+                            }}
+                            onReatribuicao={() => {
+                              setDenunciaSelecionada(denuncia);
+                              setDestinoReatribuicao('');
+                              setMotivoReatribuicao('');
+                              setReatribuicaoAberta(true);
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      {grupo.pagina && grupo.pagina.totalPages > 1 && (
+                        <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 md:flex-row md:items-center md:justify-between">
+                          <div className="text-sm text-muted-foreground">
+                            Mostrando {grupo.pagina.numberOfElements} de {grupo.pagina.totalElements} relatos desta secretaria.
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={grupo.pagina.first || carregando}
+                              onClick={() => setPaginaAtualPorSecretaria((atual) => ({
+                                ...atual,
+                                [grupo.organizacaoId]: Math.max(0, (atual[grupo.organizacaoId] ?? 0) - 1),
+                              }))}
+                            >
+                              Anterior
+                            </Button>
+                            <span className="min-w-28 text-center text-sm text-muted-foreground">
+                              Pagina {(grupo.pagina.number ?? 0) + 1} de {grupo.pagina.totalPages}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={grupo.pagina.last || carregando}
+                              onClick={() => setPaginaAtualPorSecretaria((atual) => ({
+                                ...atual,
+                                [grupo.organizacaoId]: Math.min(
+                                  grupo.pagina ? grupo.pagina.totalPages - 1 : 0,
+                                  (atual[grupo.organizacaoId] ?? 0) + 1,
+                                ),
+                              }))}
+                            >
+                              Proxima
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </AccordionContent>
@@ -537,10 +635,10 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
             ))}
           </Accordion>
         ) : (
-          grupos.map(([nomeGrupo, items]) => (
-            <section key={nomeGrupo} className="space-y-4">
+          grupos.map((grupo) => (
+            <section key={grupo.chave} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {items.map((denuncia) => (
+                {grupo.itens.map((denuncia) => (
                   <ReportManagementCard
                     key={denuncia.id}
                     denuncia={denuncia}
@@ -568,7 +666,36 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
         )}
       </div>
 
-      {paginaDenuncias && paginaDenuncias.totalElements > 0 && (
+      {modo === 'prefeitura' ? (
+        <Card className="shadow-sm">
+          <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+            <div className="text-sm text-muted-foreground">
+              Quantidade de relatos por secretaria
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Exibir</span>
+              <Select
+                value={String(quantidadePorSecretaria)}
+                onValueChange={(value) => {
+                  setPaginaAtualPorSecretaria({});
+                  setQuantidadePorSecretaria(Number(value));
+                }}
+              >
+                <SelectTrigger className="w-28 border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-primary/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="6">6</SelectItem>
+                  <SelectItem value="9">9</SelectItem>
+                  <SelectItem value="12">12</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+      paginaDenuncias && paginaDenuncias.totalElements > 0 && (
         <Card className="shadow-sm">
           <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
             <div className="text-sm text-muted-foreground">
@@ -616,7 +743,7 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
             </div>
           </CardContent>
         </Card>
-      )}
+      ))}
 
       <Dialog open={statusAberto} onOpenChange={setStatusAberto}>
         <DialogContent>

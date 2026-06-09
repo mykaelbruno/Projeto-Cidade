@@ -73,20 +73,37 @@ public class OperacionalDenunciaService {
 			String bairro,
 			StatusDenuncia status,
 			Long categoriaId,
+			Long organizacaoResponsavelId,
 			String termo,
 			Pageable pageable
 	) {
 		Organizacao organizacao = buscarOrganizacaoAtiva(organizacaoId);
 		if (organizacao.getTipo() == TipoOrganizacao.PREFEITURA) {
 			exigirAdminPrefeitura(usuarioId, organizacao.getId());
+			Long responsavelFiltrado = validarFiltroResponsavelDaPrefeitura(organizacao.getId(), organizacaoResponsavelId);
 			return denunciaRepository.findAll(
-							filtroDenunciasDaPrefeitura(organizacao.getId(), organizacao.getCidade(), cidade, bairro, status, categoriaId, termo),
+							filtroDenunciasDaPrefeitura(
+									organizacao.getId(),
+									organizacao.getCidade(),
+									cidade,
+									bairro,
+									status,
+									categoriaId,
+									responsavelFiltrado,
+									termo
+							),
 							pageable
 					)
 					.map(DenunciaResponseDTO::from);
 		}
 
 		exigirVinculoAtivo(usuarioId, organizacao.getId());
+		if (organizacaoResponsavelId != null && !organizacaoResponsavelId.equals(organizacao.getId())) {
+			throw new ResponseStatusException(
+					HttpStatus.BAD_REQUEST,
+					"Secretarias so podem consultar relatos do proprio orgao."
+			);
+		}
 		return denunciaRepository.findAll(
 						filtroDenunciasDaSecretaria(organizacao.getId(), cidade, bairro, status, categoriaId, termo),
 						pageable
@@ -389,24 +406,31 @@ public class OperacionalDenunciaService {
 			String bairro,
 			StatusDenuncia status,
 			Long categoriaId,
+			Long organizacaoResponsavelId,
 			String termo
 	) {
-		Specification<Denuncia> specification = (root, query, criteriaBuilder) -> {
-			var organizacao = root.join("organizacaoResponsavel", jakarta.persistence.criteria.JoinType.LEFT);
-			var prefeitura = organizacao.join("organizacaoPai", jakarta.persistence.criteria.JoinType.LEFT);
-			
-			var atribuido = criteriaBuilder.or(
-					criteriaBuilder.equal(organizacao.get("id"), prefeituraId),
-					criteriaBuilder.equal(prefeitura.get("id"), prefeituraId)
-			);
-			
-			var abertoNaCidade = criteriaBuilder.and(
-					criteriaBuilder.equal(root.get("status"), StatusDenuncia.ABERTO),
-					criteriaBuilder.equal(criteriaBuilder.lower(root.get("cidade")), prefeituraCidade.trim().toLowerCase())
-			);
-			
-			return criteriaBuilder.or(atribuido, abertoNaCidade);
-		};
+		Specification<Denuncia> specification;
+		if (organizacaoResponsavelId != null) {
+			specification = (root, query, criteriaBuilder) ->
+					criteriaBuilder.equal(root.get("organizacaoResponsavel").get("id"), organizacaoResponsavelId);
+		} else {
+			specification = (root, query, criteriaBuilder) -> {
+				var organizacao = root.join("organizacaoResponsavel", jakarta.persistence.criteria.JoinType.LEFT);
+				var prefeitura = organizacao.join("organizacaoPai", jakarta.persistence.criteria.JoinType.LEFT);
+
+				var atribuido = criteriaBuilder.or(
+						criteriaBuilder.equal(organizacao.get("id"), prefeituraId),
+						criteriaBuilder.equal(prefeitura.get("id"), prefeituraId)
+				);
+
+				var abertoNaCidade = criteriaBuilder.and(
+						criteriaBuilder.equal(root.get("status"), StatusDenuncia.ABERTO),
+						criteriaBuilder.equal(criteriaBuilder.lower(root.get("cidade")), prefeituraCidade.trim().toLowerCase())
+				);
+
+				return criteriaBuilder.or(atribuido, abertoNaCidade);
+			};
+		}
 		return specification.and(filtrosBasicos(cidade, bairro, status, categoriaId, termo));
 	}
 
@@ -470,5 +494,27 @@ public class OperacionalDenunciaService {
 
 	private String trimOrNull(String value) {
 		return StringUtils.hasText(value) ? value.trim() : null;
+	}
+
+	private Long validarFiltroResponsavelDaPrefeitura(Long prefeituraId, Long organizacaoResponsavelId) {
+		if (organizacaoResponsavelId == null) {
+			return null;
+		}
+
+		if (organizacaoResponsavelId.equals(prefeituraId)) {
+			return organizacaoResponsavelId;
+		}
+
+		Organizacao secretaria = buscarOrganizacaoAtiva(organizacaoResponsavelId);
+		if (secretaria.getTipo() != TipoOrganizacao.SECRETARIA
+				|| secretaria.getOrganizacaoPai() == null
+				|| !secretaria.getOrganizacaoPai().getId().equals(prefeituraId)) {
+			throw new ResponseStatusException(
+					HttpStatus.BAD_REQUEST,
+					"Organizacao responsavel informada nao pertence a prefeitura."
+			);
+		}
+
+		return organizacaoResponsavelId;
 	}
 }

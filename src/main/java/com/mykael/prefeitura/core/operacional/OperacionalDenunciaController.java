@@ -44,6 +44,7 @@ public class OperacionalDenunciaController implements OperacionalDenunciaControl
 			@RequestParam(required = false) String bairro,
 			@RequestParam(required = false) StatusDenuncia status,
 			@RequestParam(required = false) Long categoriaId,
+			@RequestParam(required = false) Long organizacaoResponsavelId,
 			@RequestParam(required = false) String termo,
 			@AuthenticationPrincipal Jwt jwt,
 			@PageableDefault(size = 20, sort = "criadoEm", direction = Sort.Direction.DESC) Pageable pageable
@@ -55,6 +56,7 @@ public class OperacionalDenunciaController implements OperacionalDenunciaControl
 				bairro,
 				status,
 				categoriaId,
+				organizacaoResponsavelId,
 				termo,
 				pageable
 		);

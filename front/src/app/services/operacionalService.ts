@@ -31,6 +31,10 @@ function appendFiltroParams(params: URLSearchParams, filtros: FiltrosOperacionai
     params.set('categoriaId', String(filtros.categoriaId));
   }
 
+  if (filtros.organizacaoResponsavelId) {
+    params.set('organizacaoResponsavelId', String(filtros.organizacaoResponsavelId));
+  }
+
   if (filtros.termo?.trim()) {
     params.set('termo', filtros.termo.trim());
   }

@@ -397,6 +397,32 @@ class FluxosPrincipaisIntegrationTest {
 	}
 
 	@Test
+	void deveFiltrarRelatosOperacionaisDaPrefeituraPorSecretariaResponsavel() throws Exception {
+		Usuario adminPrefeitura = usuario(PerfilUsuario.MORADOR);
+		Organizacao prefeitura = prefeitura();
+		Organizacao secretariaInfra = secretaria(prefeitura);
+		Organizacao secretariaSaude = secretaria(prefeitura);
+		vinculo(adminPrefeitura, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+
+		Denuncia denunciaInfra = denunciaComResponsavel(secretariaInfra);
+		denunciaInfra.setTitulo("Relato da infraestrutura");
+		denunciaRepository.save(denunciaInfra);
+
+		Denuncia denunciaSaude = denunciaComResponsavel(secretariaSaude);
+		denunciaSaude.setTitulo("Relato da saude");
+		denunciaRepository.save(denunciaSaude);
+
+		mockMvc.perform(get("/api/operacional/organizacoes/{organizacaoId}/denuncias", prefeitura.getId())
+						.param("organizacaoResponsavelId", String.valueOf(secretariaInfra.getId()))
+						.with(jwtUsuario(adminPrefeitura, "MORADOR", "ADMIN_PREFEITURA")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content", hasSize(1)))
+				.andExpect(jsonPath("$.content[0].id").value(denunciaInfra.getId()))
+				.andExpect(jsonPath("$.content[0].organizacaoResponsavelId").value(secretariaInfra.getId()))
+				.andExpect(jsonPath("$.content[0].titulo").value("Relato da infraestrutura"));
+	}
+
+	@Test
 	void deveExportarDenunciasOperacionaisEmCsvSemDadosDoAutor() throws Exception {
 		Usuario adminPrefeitura = usuario(PerfilUsuario.MORADOR);
 		Organizacao prefeitura = prefeitura();

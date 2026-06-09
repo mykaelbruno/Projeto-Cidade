@@ -67,6 +67,7 @@ export interface FiltrosOperacionais {
   bairro?: string;
   status?: StatusDenuncia | null;
   categoriaId?: number | null;
+  organizacaoResponsavelId?: number | null;
   termo?: string | null;
   page?: number;
   size?: number;

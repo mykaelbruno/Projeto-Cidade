@@ -3,12 +3,17 @@ package com.mykael.prefeitura.core.vinculo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import java.util.List;
+import java.util.Optional;
 
 public interface VinculoUsuarioOrganizacaoRepository extends JpaRepository<VinculoUsuarioOrganizacao, Long> {
 
 	@Override
 	@EntityGraph(attributePaths = {"usuario", "organizacao"})
 	List<VinculoUsuarioOrganizacao> findAll();
+
+	@Override
+	@EntityGraph(attributePaths = {"usuario", "organizacao"})
+	Optional<VinculoUsuarioOrganizacao> findById(Long id);
 
 	@EntityGraph(attributePaths = {"usuario", "organizacao"})
 	List<VinculoUsuarioOrganizacao> findByUsuarioIdAndAtivoTrue(Long usuarioId);

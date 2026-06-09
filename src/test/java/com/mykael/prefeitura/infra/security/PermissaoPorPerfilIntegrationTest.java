@@ -212,6 +212,27 @@ class PermissaoPorPerfilIntegrationTest {
 	}
 
 	@Test
+	void devePermitirAdminAppAtualizarVinculoSemErroInterno() throws Exception {
+		Usuario adminApp = usuario(PerfilUsuario.ADMIN_APP);
+		Usuario operador = usuario(PerfilUsuario.MORADOR);
+		Organizacao prefeitura = prefeitura();
+		VinculoUsuarioOrganizacao vinculo = vinculo(operador, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/vinculos/{vinculoId}", vinculo.getId())
+						.with(jwtUsuario(adminApp, "ADMIN_APP"))
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "papel": "ADMIN_PREFEITURA",
+								  "ativo": false
+								}
+								"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(vinculo.getId()))
+				.andExpect(jsonPath("$.ativo").value(false));
+	}
+
+	@Test
 	void deveBloquearSecretariaAoAprovarTransferencia() throws Exception {
 		Usuario adminSecretaria = usuario(PerfilUsuario.MORADOR);
 

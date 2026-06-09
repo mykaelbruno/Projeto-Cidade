@@ -27,6 +27,7 @@ import { getOperationalPathPrefix, getVinculoOperacionalAtivo } from '../../util
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import {
   Dialog,
   DialogContent,
@@ -476,41 +477,95 @@ export function OperationalReports({ modo }: OperationalReportsProps) {
       )}
 
       <div className="space-y-7">
-        {grupos.map(([nomeGrupo, items]) => (
-          <section key={nomeGrupo} className="space-y-4">
-            {modo === 'prefeitura' && (
-              <div className="flex items-center gap-3 border-b border-border pb-3">
-                <Building2 className="w-5 h-5 text-primary" />
-                <h3 className="font-semibold text-foreground">{nomeGrupo}</h3>
-                <Badge variant="secondary">{items.length} relatos</Badge>
+        {modo === 'prefeitura' ? (
+          <Accordion type="multiple" className="space-y-4">
+            {grupos.map(([nomeGrupo, items], index) => (
+              <AccordionItem
+                key={nomeGrupo}
+                value={`${nomeGrupo}-${index}`}
+                className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+              >
+                <AccordionTrigger className="px-4 py-4 hover:no-underline [&>svg]:shrink-0">
+                  <div className="flex min-w-0 flex-1 items-center gap-3 pr-3 text-left">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Building2 className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold text-foreground">{nomeGrupo}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Clique para {items.length > 0 ? 'visualizar os relatos desta secretaria' : 'ver que nao ha relatos neste grupo'}.
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="ml-auto shrink-0">
+                      {items.length} {items.length === 1 ? 'relato' : 'relatos'}
+                    </Badge>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="border-t border-border px-4 pb-4 pt-4">
+                  {items.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+                      Nenhum relato atribuido a esta secretaria no momento.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                      {items.map((denuncia) => (
+                        <ReportManagementCard
+                          key={denuncia.id}
+                          denuncia={denuncia}
+                          modo={modo}
+                          onDetalhes={() => navigate(`${prefix}/relato/${denuncia.id}`)}
+                          onStatus={() => abrirStatus(denuncia)}
+                          onResposta={() => abrirResposta(denuncia)}
+                          onTransferencia={() => {
+                            setDenunciaSelecionada(denuncia);
+                            setDestinoTransferencia('');
+                            setMotivoTransferencia('');
+                            setTransferenciaAberta(true);
+                          }}
+                          onReatribuicao={() => {
+                            setDenunciaSelecionada(denuncia);
+                            setDestinoReatribuicao('');
+                            setMotivoReatribuicao('');
+                            setReatribuicaoAberta(true);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        ) : (
+          grupos.map(([nomeGrupo, items]) => (
+            <section key={nomeGrupo} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                {items.map((denuncia) => (
+                  <ReportManagementCard
+                    key={denuncia.id}
+                    denuncia={denuncia}
+                    modo={modo}
+                    onDetalhes={() => navigate(`${prefix}/relato/${denuncia.id}`)}
+                    onStatus={() => abrirStatus(denuncia)}
+                    onResposta={() => abrirResposta(denuncia)}
+                    onTransferencia={() => {
+                      setDenunciaSelecionada(denuncia);
+                      setDestinoTransferencia('');
+                      setMotivoTransferencia('');
+                      setTransferenciaAberta(true);
+                    }}
+                    onReatribuicao={() => {
+                      setDenunciaSelecionada(denuncia);
+                      setDestinoReatribuicao('');
+                      setMotivoReatribuicao('');
+                      setReatribuicaoAberta(true);
+                    }}
+                  />
+                ))}
               </div>
-            )}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {items.map((denuncia) => (
-                <ReportManagementCard
-                  key={denuncia.id}
-                  denuncia={denuncia}
-                  modo={modo}
-                  onDetalhes={() => navigate(`${prefix}/relato/${denuncia.id}`)}
-                  onStatus={() => abrirStatus(denuncia)}
-                  onResposta={() => abrirResposta(denuncia)}
-                  onTransferencia={() => {
-                    setDenunciaSelecionada(denuncia);
-                    setDestinoTransferencia('');
-                    setMotivoTransferencia('');
-                    setTransferenciaAberta(true);
-                  }}
-                  onReatribuicao={() => {
-                    setDenunciaSelecionada(denuncia);
-                    setDestinoReatribuicao('');
-                    setMotivoReatribuicao('');
-                    setReatribuicaoAberta(true);
-                  }}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+            </section>
+          ))
+        )}
       </div>
 
       {paginaDenuncias && paginaDenuncias.totalElements > 0 && (

@@ -1,115 +1,123 @@
-# Cidade Ativa
+# 🏙️ Cidade Ativa
 
-Cidade Ativa e uma plataforma de participacao cidada e zeladoria urbana. A ideia central e aproximar moradores, prefeitura e secretarias em um fluxo publico, rastreavel e mais transparente para registrar, acompanhar e resolver problemas da cidade.
+O **Cidade Ativa** é um sistema de zeladoria urbana e participação cidadã. A plataforma conecta moradores à administração pública municipal (Prefeitura e Secretarias) para registrar, acompanhar e resolver problemas de infraestrutura urbana de forma pública e transparente.
 
-Em vez de tratar cada solicitacao como um protocolo isolado, o sistema organiza relatos urbanos em um feed civico: moradores conseguem ver problemas do bairro, apoiar demandas parecidas, marcar urgencia, comentar, anexar fotos e acompanhar a resposta oficial do poder publico. Do outro lado, prefeitura e secretarias recebem um painel operacional para atender, responder, transferir responsabilidade quando necessario e manter historico das acoes.
+Ao contrário dos canais tradicionais de atendimento individual, o sistema funciona como uma rede georreferenciada. Os problemas são publicados em um feed público, permitindo o engajamento da vizinhança e o acompanhamento de todo o processo de resolução.
 
-## O Que O Sistema Permite
+---
 
-### Para moradores
+## 🛠️ O que o sistema faz (Funcionalidades)
 
-- Criar denuncias urbanas com categoria, endereco, bairro, cidade, fotos e localizacao no mapa.
-- Consultar relatos semelhantes antes de enviar uma nova denuncia, evitando duplicidade.
-- Acompanhar um feed misto de denuncias abertas, recentes e relevantes.
-- Apoiar relatos de outros moradores e marcar problemas como urgentes.
-- Comentar em relatos, remover o proprio comentario e sinalizar conteudos inadequados.
-- Acompanhar suas proprias denuncias e confirmar ou contestar quando uma demanda for marcada como concluida.
+O sistema divide suas operações com base em perfis de acesso:
 
-### Para prefeitura
+### 👤 Morador
+*   **Registrar Ocorrências**: Cria relatos informando título, descrição, categoria (asfalto, iluminação, saneamento, etc.), fotos e localização exata em mapa interativo.
+*   **Anonimato**: Opção de ocultar a identidade na visualização pública do relato, mas mantendo os dados internos para fins legais e auditoria.
+*   **Engajamento Cívico**: Apoiar relatos de outros cidadãos (sistema de upvotes) ou marcar ocorrências como urgentes e dar mais visibilidades a problemas reais e mais engajados, ou seja, mais relevantes para a população.
+*   **Comentários**: Interagir publicamente nos relatos de outros cidadãos, para discutir desdobramentos de problemas urbanos em seções públicas.
+*   **Validação da Resolução**: Quando o serviço é marcado como concluído pela prefeitura, o morador pode **confirmar** a resolução ou **contestar** o resultado (o que reabre o ticket operacional automaticamente).
 
-- Visualizar denuncias da cidade separadas por secretaria responsavel.
-- Acompanhar indicadores operacionais basicos e exportar relatorios em CSV.
-- Criar e gerenciar secretarias, operadores institucionais, bairros e categorias atendidas.
-- Aprovar ou recusar solicitacoes de transferencia entre secretarias.
-- Reatribuir manualmente uma denuncia quando a responsabilidade estiver incorreta.
+### 🏛️ Prefeitura (Gestão Central)
+*   **Painel de Controle**: Visão holística de todas as secretarias e do andamento de todas as ocorrências da cidade.
+*   **Mediação de Demandas**: Aprovar, recusar ou reatribuir solicitações de transferência de chamados entre secretarias (evitando o "jogo de empurra").
+*   **Cadastros Municipais**: Gerenciar a equipe municipal, categorias de denúncia, respectivos responsáveis por cada categoria e os bairros ativos da cidade.
+*   **Exportação**: Geração de relatórios operacionais em formato CSV.
 
-### Para secretarias
+### 🏢 Secretarias (Operacional)
+*   **Fila de Trabalho**: Atender relatos que pertencem à sua área de atuação (Ex: Secretaria de Obras, Meio Ambiente).
+*   **Respostas Oficiais**: Publicar respostas oficiais que alteram o status operacional da ocorrência na linha do tempo pública.
+*   **Solicitar Transferência**: Sugerir a transferência fundamentada de um relato caso a demanda pertença a outra secretaria.
 
-- Atender os relatos atribuidos a sua organizacao.
-- Atualizar status da denuncia durante o atendimento.
-- Publicar respostas oficiais visiveis aos moradores.
-- Solicitar transferencia para outra secretaria quando a demanda nao for de sua competencia.
+### 🛡️ Moderador
+*   **Moderação**: Revisar denúncias de abuso reportadas por moradores, com permissão para arquivar relatos indevidos ou remover comentários impróprios.
+*   **Gestão de Usuários**: Aplicar advertências, suspensões ou reativações em contas de moradores com histórico de infrações.
 
-### Para moderacao e administracao do sistema
+### 👑 Administrador do Sistema (Super Admin)
+*   **Gestão SaaS**: Gerenciar o cadastro de municípios parceiros, usuários globais do sistema, vínculos institucionais e visualizar logs gerais de auditoria.
 
-- Moderadores podem revisar sinalizacoes, arquivar relatos indevidos e remover comentarios problematicos.
-- O Admin App gerencia prefeituras, secretarias, usuarios globais, vinculos institucionais, categorias, auditoria e moderacao geral.
-- Todas as acoes sensiveis passam por regras de permissao e registro de auditoria.
+---
 
-## Ideia De Produto
+## ⚙️ Ciclo de Vida de um Relato
 
-O Cidade Ativa foi pensado como uma ponte entre comunidade e gestao publica. O morador deixa de depender apenas de canais fechados de atendimento e passa a acompanhar o que acontece na cidade de forma mais clara.
+Cada ocorrência segue a seguinte máquina de estados no banco de dados:
 
-A prefeitura, por sua vez, ganha uma fila organizada de demandas, com trilha de historico, engajamento da comunidade e controle de responsabilidades entre secretarias. Isso reduz retrabalho, evita o "jogo de empurra" e cria um ciclo em que a conclusao de um problema pode ser validada pelo proprio cidadao que abriu o relato.
-
-## Fluxo Basico
-
-1. O morador se cadastra e acessa o feed da sua cidade.
-2. Ele cria uma denuncia informando categoria, bairro, localizacao e fotos.
-3. O sistema valida se a denuncia pertence a cidade do morador e sugere relatos semelhantes quando existirem.
-4. A denuncia entra no fluxo operacional da prefeitura ou secretaria responsavel.
-5. A organizacao publica respostas oficiais e atualiza o status.
-6. Se a demanda for concluida, o morador pode confirmar ou contestar a resolucao.
-7. Comentarios e relatos inadequados podem ser sinalizados para moderacao.
-
-## Stack Em Uma Visao Rapida
-
-O projeto e dividido em backend e frontend.
-
-No backend:
-
-- Java 21.
-- Spring Boot.
-- Spring Security com autenticacao por JWT/cookies.
-- Spring Data JPA e Hibernate.
-- PostgreSQL.
-- Flyway para migrations.
-- OpenAPI/Swagger para documentacao da API.
-- Testes com JUnit, Spring Boot Test e H2 em cenarios locais.
-
-No frontend:
-
-- React com Vite.
-- TypeScript.
-- React Router.
-- Tailwind CSS e componentes de UI.
-- Leaflet/OpenStreetMap para mapas.
-- Services organizados por dominio para conversar com a API real.
-
-## Organizacao Do Projeto
-
-```text
-src/main/java/com/mykael/prefeitura
-  core/        regras principais do dominio
-  infra/       autenticacao, seguranca, email, auditoria e configuracoes
-
-src/main/resources/db/migration
-  migrations Flyway do banco
-
-front/
-  aplicacao React integrada ao backend
-
-docs/
-  documentacao de produto, alteracoes e fechamento da integracao
+```Java
+graph TD
+    ABERTO["Aberto"] --> EM_ANALISE["Em Análise"]
+    EM_ANALISE --> ENCAMINHADO["Encaminhado"]
+    ENCAMINHADO --> EM_ANDAMENTO["Em Andamento"]
+    EM_ANDAMENTO --> PROGRAMADO["Programado"]
+    PROGRAMADO --> CONCLUIDO["Concluído"]
+    
+    CONCLUIDO -->|"Confirmação do Morador"| CONCLUIDO_CONFIRMADO["Concluído e Confirmado"]
+    CONCLUIDO -->|"Contestação do Morador"| REABERTO["Reaberto"]
+    
+    REABERTO --> EM_ANALISE
+    ABERTO --> ARQUIVADO["Arquivado"]
+    EM_ANALISE --> ARQUIVADO
 ```
 
-## Documentacao
+---
 
-Alguns documentos importantes:
+## 💻 Stack Tecnológica
 
-- `SISTEMA.md`: visao detalhada da ideia e das regras gerais do sistema.
-- `docs/finalizacao/api-contract.md`: contrato da API usado para integrar frontend e backend.
-- `docs/finalizacao/integracao_front_backend.md`: acompanhamento da integracao e pendencias conscientes.
-- `docs/alterações/`: historico das grandes alteracoes implementadas.
+*   **Backend**: Java 21, Spring Boot, Spring Security (Autenticação baseada em JWT com cookies HttpOnly seguros), Spring Data JPA, Hibernate, PostgreSQL e Flyway.
+*   **Frontend**: React, Vite, TypeScript, Tailwind CSS, React Query (@tanstack/react-query) e Leaflet (OpenStreetMap).
 
-Com a aplicacao backend rodando, a documentacao Swagger fica disponivel em:
+---
+
+## 🚀 Como Executar o Projeto
+
+### Modo Completo (Docker Compose)
+Inicia o banco de dados, o backend e o frontend juntos:
+```bash
+# 1. Copie o arquivo de variáveis de ambiente
+copy .env.docker.example .env.docker
+
+# 2. Suba o ambiente
+docker compose up -d --build
+```
+*   **Frontend**: [http://localhost:5173](http://localhost:5173)
+*   **Backend (API)**: [http://localhost:8080](http://localhost:8080)
+
+---
+
+### Modo Híbrido (Desenvolvimento)
+Inicia o banco de dados no Docker e executa a aplicação localmente para desenvolvimento:
+
+1.  **Banco de Dados**:
+    ```bash
+    copy .env.example .env
+    docker compose up -d postgres
+    ```
+2.  **Backend**:
+    ```bash
+    .\mvnw.cmd spring-boot:run
+    ```
+3.  **Frontend**:
+    ```bash
+    cd front
+    npm install
+    npm run dev
+    ```
+
+*   **Swagger da API**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+*   **Credenciais do Admin Local (`ADMIN_APP`)**:
+    *   *Usuário*: `admin_app`
+    *   *Senha*: `admin-local-dev-change-me` (definida no arquivo `.env`)
+
+---
+
+## 📂 Organização do Repositório
 
 ```text
-http://localhost:8080/swagger-ui.html
+├── src/main/java/com/mykael/prefeitura
+│   ├── core/         # Regras de negócio (denúncia, feed, usuário, comentários)
+│   └── infra/        # Segurança, JWT, expurgo de dados, storage
+├── src/main/resources
+│   ├── db/migration  # Scripts Flyway de banco de dados
+│   └── application.yml
+├── front/            # Código-fonte do frontend (React / TypeScript)
+├── docs/             # Contrato de API e manuais técnicos
+└── docker-compose.yml
 ```
-
-## Estado Atual
-
-O backend ja cobre os fluxos principais de autenticacao, denuncias, feed, anexos, comentarios, interacoes, operacao institucional, transferencias, notificacoes, moderacao, usuarios, organizacoes, vinculos, categorias, bairros e auditoria.
-
-O frontend em `front/` ja esta majoritariamente conectado aos contratos reais do backend. As pendencias atuais estao registradas em `docs/finalizacao/integracao_front_backend.md`, principalmente revisao manual em navegador, possivel code-splitting futuro e eventual uso de geometria oficial para bairros.

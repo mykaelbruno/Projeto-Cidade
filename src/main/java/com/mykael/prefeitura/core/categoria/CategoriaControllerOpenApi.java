@@ -25,7 +25,7 @@ import org.springframework.http.ResponseEntity;
 @ApiResponses({
 		@ApiResponse(responseCode = "400", description = "Requisicao invalida.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class), examples = @ExampleObject(value = OpenApiExemplos.ERRO_VALIDACAO))),
 		@ApiResponse(responseCode = "401", description = "Autenticacao obrigatoria.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class))),
-		@ApiResponse(responseCode = "403", description = "Apenas ADMIN_APP nas operacoes de escrita.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class))),
+		@ApiResponse(responseCode = "403", description = "Apenas ADMIN nas operacoes de escrita.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class))),
 		@ApiResponse(responseCode = "404", description = "Categoria ou organizacao responsavel nao encontrada.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class)))
 })
 public interface CategoriaControllerOpenApi {
@@ -34,7 +34,7 @@ public interface CategoriaControllerOpenApi {
 	@ApiResponse(responseCode = "200", description = "Categorias retornadas.")
 	List<CategoriaResponseDTO> listar();
 
-	@Operation(summary = "Cria categoria", description = "Permite que ADMIN_APP crie uma nova categoria de denuncia.")
+	@Operation(summary = "Cria categoria", description = "Permite que ADMIN crie uma nova categoria de denuncia.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "201", description = "Categoria criada.")
 	ResponseEntity<CategoriaResponseDTO> criar(
@@ -43,7 +43,7 @@ public interface CategoriaControllerOpenApi {
 			CategoriaCreateRequestDTO request
 	);
 
-	@Operation(summary = "Atualiza categoria", description = "Permite que ADMIN_APP altere nome, descricao e organizacao responsavel padrao.")
+	@Operation(summary = "Atualiza categoria", description = "Permite que ADMIN altere nome, descricao e organizacao responsavel padrao.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Categoria atualizada.")
 	ResponseEntity<CategoriaResponseDTO> atualizar(
@@ -53,7 +53,7 @@ public interface CategoriaControllerOpenApi {
 			CategoriaUpdateRequestDTO request
 	);
 
-	@Operation(summary = "Ativa ou desativa categoria", description = "Permite que ADMIN_APP altere a situacao de uma categoria.")
+	@Operation(summary = "Ativa ou desativa categoria", description = "Permite que ADMIN altere a situacao de uma categoria.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Ativacao da categoria alterada.")
 	ResponseEntity<CategoriaResponseDTO> alterarAtiva(

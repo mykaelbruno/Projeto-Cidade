@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { NotificationsList } from '../components/NotificationsList';
-import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { useUser } from '../contexts/UserContext';
 
 const menuItems = [
@@ -148,9 +147,9 @@ export function SecretariaLayout() {
                   <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
                     <div className="border-b border-border p-4">
                       <p className="text-sm font-medium text-foreground">
-                        Ola, <span className="font-semibold">Admin Secretaria</span>!
+                        Ola, <span className="font-semibold">Equipe da secretaria</span>!
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">Administrador da secretaria</p>
+                      <p className="mt-1 text-xs text-muted-foreground">SECRETARIA</p>
                     </div>
                     <div className="py-1">
                       <button
@@ -188,8 +187,6 @@ export function SecretariaLayout() {
           <Outlet />
         </main>
       </div>
-
-      <ProfileSwitcher />
     </div>
   );
 }

@@ -31,7 +31,7 @@ import org.springframework.http.ResponseEntity;
 })
 public interface UsuarioControllerOpenApi {
 
-	@Operation(summary = "Lista usuarios", description = "Retorna usuarios cadastrados com filtros opcionais. ADMIN_PREFEITURA enxerga apenas usuarios da propria cidade; ADMIN_APP enxerga a base global.")
+	@Operation(summary = "Lista usuarios", description = "Retorna usuarios cadastrados com filtros opcionais. PREFEITURA enxerga apenas usuarios da propria cidade; ADMIN enxerga a base global.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Usuarios retornados.")
 	List<UsuarioResponseDTO> listar(
@@ -40,7 +40,7 @@ public interface UsuarioControllerOpenApi {
 			@Parameter(description = "Filtra pela situacao ativa do usuario.") Boolean ativo
 	);
 
-	@Operation(summary = "Cria usuario", description = "Permite criar usuarios globais do sistema, incluindo ADMIN_APP, MORADOR e MODERADOR. ADMIN_PREFEITURA fica limitada a usuarios da propria cidade.")
+	@Operation(summary = "Cria usuario", description = "Permite criar usuarios globais do sistema, incluindo ADMIN, MORADOR e MODERADOR. PREFEITURA fica limitada a usuarios da propria cidade.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "201", description = "Usuario criado.")
 	ResponseEntity<UsuarioResponseDTO> criar(
@@ -49,7 +49,7 @@ public interface UsuarioControllerOpenApi {
 			UsuarioCreateRequestDTO request
 	);
 
-	@Operation(summary = "Atualiza usuario", description = "Atualiza dados cadastrais e perfil global de um usuario. ADMIN_PREFEITURA fica limitada a usuarios da propria cidade.")
+	@Operation(summary = "Atualiza usuario", description = "Atualiza dados cadastrais e perfil global de um usuario. PREFEITURA fica limitada a usuarios da propria cidade.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Usuario atualizado.")
 	ResponseEntity<UsuarioResponseDTO> atualizar(
@@ -59,7 +59,7 @@ public interface UsuarioControllerOpenApi {
 			UsuarioUpdateRequestDTO request
 	);
 
-	@Operation(summary = "Ativa ou desativa usuario", description = "Altera a situacao de um usuario dentro do escopo permitido. O ultimo ADMIN_APP ativo nao pode ser desativado.")
+	@Operation(summary = "Ativa ou desativa usuario", description = "Altera a situacao de um usuario dentro do escopo permitido. O ultimo ADMIN ativo nao pode ser desativado.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Ativacao do usuario alterada.")
 	ResponseEntity<UsuarioResponseDTO> alterarAtivo(

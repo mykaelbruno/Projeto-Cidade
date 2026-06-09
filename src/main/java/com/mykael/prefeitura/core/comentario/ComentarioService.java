@@ -95,13 +95,13 @@ public class ComentarioService {
 				.filter(Organizacao::isAtiva)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organizacao ativa nao encontrada."));
 
-		if (autor.getPerfilGlobal() != PerfilUsuario.ADMIN_APP && 
+		if (autor.getPerfilGlobal() != PerfilUsuario.ADMIN && 
 				!organizacao.getCidade().equalsIgnoreCase(denuncia.getCidade())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta organizacao pertence a outra cidade e nao pode responder a este relato.");
 		}
 
 		boolean possuiPermissao = false;
-		if (autor.getPerfilGlobal() == PerfilUsuario.ADMIN_APP) {
+		if (autor.getPerfilGlobal() == PerfilUsuario.ADMIN) {
 			possuiPermissao = true;
 		} else {
 			boolean vinculoDireto = vinculoRepository.existsByUsuarioIdAndOrganizacaoIdAndAtivoTrue(autorId, organizacao.getId());
@@ -110,7 +110,7 @@ public class ComentarioService {
 			} else {
 				List<VinculoUsuarioOrganizacao> vinculos = vinculoRepository.findByUsuarioIdAndAtivoTrue(autorId);
 				for (VinculoUsuarioOrganizacao v : vinculos) {
-					if (v.getPapel() == PapelUsuario.ADMIN_PREFEITURA) {
+					if (v.getPapel() == PapelUsuario.PREFEITURA) {
 						Long prefeituraId = v.getOrganizacao().getId();
 						if (organizacao.getOrganizacaoPai() != null && organizacao.getOrganizacaoPai().getId().equals(prefeituraId)) {
 							possuiPermissao = true;

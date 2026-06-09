@@ -29,7 +29,7 @@ public class ModeracaoController implements ModeracaoControllerOpenApi {
 
 	@Override
 	@PostMapping("/denuncias/{denunciaId}/arquivamento")
-	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MODERADOR')")
 	public ResponseEntity<ModeracaoResponseDTO> arquivarDenuncia(
 			@PathVariable Long denunciaId,
 			@Valid @RequestBody ModeracaoRequestDTO request,
@@ -44,7 +44,7 @@ public class ModeracaoController implements ModeracaoControllerOpenApi {
 
 	@Override
 	@PostMapping("/comentarios/{comentarioId}/remocao")
-	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MODERADOR')")
 	public ResponseEntity<ModeracaoResponseDTO> removerComentario(
 			@PathVariable Long comentarioId,
 			@Valid @RequestBody ModeracaoRequestDTO request,
@@ -59,7 +59,7 @@ public class ModeracaoController implements ModeracaoControllerOpenApi {
 
 	@Override
 	@PostMapping("/usuarios/{usuarioId}/advertencia")
-	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MODERADOR')")
 	public ResponseEntity<ModeracaoResponseDTO> advertirUsuario(
 			@PathVariable Long usuarioId,
 			@Valid @RequestBody ModeracaoRequestDTO request,
@@ -74,7 +74,7 @@ public class ModeracaoController implements ModeracaoControllerOpenApi {
 
 	@Override
 	@PostMapping("/usuarios/{usuarioId}/suspensao")
-	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MODERADOR')")
 	public ResponseEntity<ModeracaoResponseDTO> suspenderUsuario(
 			@PathVariable Long usuarioId,
 			@Valid @RequestBody ModeracaoRequestDTO request,
@@ -89,7 +89,7 @@ public class ModeracaoController implements ModeracaoControllerOpenApi {
 
 	@Override
 	@PostMapping("/usuarios/{usuarioId}/reativacao")
-	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MODERADOR')")
 	public ResponseEntity<ModeracaoResponseDTO> reativarUsuario(
 			@PathVariable Long usuarioId,
 			@Valid @RequestBody ModeracaoRequestDTO request,
@@ -104,7 +104,7 @@ public class ModeracaoController implements ModeracaoControllerOpenApi {
 
 	@Override
 	@GetMapping("/usuarios/{usuarioId}/historico")
-	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MODERADOR')")
 	public Page<ModeracaoResponseDTO> listarHistoricoUsuario(
 			@PathVariable Long usuarioId,
 			@PageableDefault(size = 20, sort = "criadoEm") Pageable pageable

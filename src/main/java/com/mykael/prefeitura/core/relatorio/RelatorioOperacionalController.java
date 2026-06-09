@@ -27,7 +27,7 @@ public class RelatorioOperacionalController implements RelatorioOperacionalContr
 
 	@Override
 	@GetMapping(value = "/operacional/organizacoes/{organizacaoId}/denuncias.csv", produces = "text/csv")
-	@PreAuthorize("hasAnyRole('ADMIN_PREFEITURA', 'ADMIN_SECRETARIA', 'ATENDENTE_SECRETARIA')")
+	@PreAuthorize("hasAnyRole('PREFEITURA', 'SECRETARIA')")
 	public ResponseEntity<byte[]> exportarDenunciasCsv(
 			@PathVariable Long organizacaoId,
 			@RequestParam(required = false) String cidade,

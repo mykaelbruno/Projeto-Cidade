@@ -3,7 +3,6 @@ import { Outlet, useNavigate } from 'react-router';
 import { LogOut, Settings, UserCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { NotificationsList } from '../components/NotificationsList';
-import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { useUser } from '../contexts/UserContext';
 
 export function ModeradorLayout() {
@@ -88,8 +87,6 @@ export function ModeradorLayout() {
       <main className="min-w-0 overflow-y-auto">
         <Outlet />
       </main>
-
-      <ProfileSwitcher />
     </div>
   );
 }

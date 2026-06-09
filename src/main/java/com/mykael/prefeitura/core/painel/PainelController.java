@@ -22,7 +22,7 @@ public class PainelController implements PainelControllerOpenApi {
 
 	@Override
 	@GetMapping("/operacional/organizacoes/{organizacaoId}/resumo")
-	@PreAuthorize("hasAnyRole('ADMIN_PREFEITURA', 'ADMIN_SECRETARIA', 'ATENDENTE_SECRETARIA')")
+	@PreAuthorize("hasAnyRole('PREFEITURA', 'SECRETARIA')")
 	public PainelOperacionalResumoDTO gerarResumoOperacional(
 			@PathVariable Long organizacaoId,
 			@AuthenticationPrincipal Jwt jwt
@@ -32,7 +32,7 @@ public class PainelController implements PainelControllerOpenApi {
 
 	@Override
 	@GetMapping("/moderacao/resumo")
-	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MODERADOR')")
 	public PainelModeracaoResumoDTO gerarResumoModeracao() {
 		return painelService.gerarResumoModeracao();
 	}

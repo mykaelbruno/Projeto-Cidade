@@ -46,8 +46,8 @@ function getAvailableUserTypes(session: UsuarioLogadoResponseDTO | null): UserTy
   const types = new Set<UserType>();
   const { usuario, vinculosOperacionais } = session;
 
-  if (usuario.perfilGlobal === 'ADMIN_APP') {
-    types.add('admin_app');
+  if (usuario.perfilGlobal === 'ADMIN') {
+    types.add('admin');
   }
 
   if (usuario.perfilGlobal === 'MODERADOR') {
@@ -61,11 +61,11 @@ function getAvailableUserTypes(session: UsuarioLogadoResponseDTO | null): UserTy
   vinculosOperacionais
     .filter((vinculo) => vinculo.ativo)
     .forEach((vinculo) => {
-      if (vinculo.papel === 'ADMIN_PREFEITURA') {
+      if (vinculo.papel === 'PREFEITURA') {
         types.add('prefeitura');
       }
 
-      if (vinculo.papel === 'ADMIN_SECRETARIA' || vinculo.papel === 'ATENDENTE_SECRETARIA') {
+      if (vinculo.papel === 'SECRETARIA') {
         types.add('secretaria');
       }
     });
@@ -75,7 +75,7 @@ function getAvailableUserTypes(session: UsuarioLogadoResponseDTO | null): UserTy
 
 function pickInitialUserType(types: UserType[]): UserType {
   return (
-    types.find((type) => type === 'admin_app') ??
+    types.find((type) => type === 'admin') ??
     types.find((type) => type === 'moderador') ??
     types.find((type) => type === 'prefeitura') ??
     types.find((type) => type === 'secretaria') ??
@@ -86,7 +86,7 @@ function pickInitialUserType(types: UserType[]): UserType {
 
 export function getHomePathByUserType(userType: UserType) {
   switch (userType) {
-    case 'admin_app':
+    case 'admin':
       return '/admin-app/visao-geral';
     case 'moderador':
       return '/moderador/painel';
@@ -234,7 +234,7 @@ export function UserProvider({ children }: UserProviderProps) {
     isAdmin: userType === 'prefeitura',
     isSecretaria: userType === 'secretaria',
     isMorador: userType === 'morador',
-    isAdminApp: userType === 'admin_app',
+    isAdminApp: userType === 'admin',
     isModerador: userType === 'moderador',
   };
 

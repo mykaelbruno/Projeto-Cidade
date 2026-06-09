@@ -36,7 +36,7 @@ public interface RelatorioOperacionalControllerOpenApi {
 			summary = "Exporta denuncias operacionais em CSV",
 			description = """
 					Gera um arquivo CSV com denuncias acessiveis pela organizacao informada.
-					Para prefeitura, exige ADMIN_PREFEITURA vinculado e exporta denuncias da prefeitura e das secretarias filhas.
+					Para prefeitura, exige PREFEITURA vinculado e exporta denuncias da prefeitura e das secretarias filhas.
 					Para secretaria, exige vinculo institucional ativo e exporta apenas denuncias atribuidas a secretaria.
 					O arquivo nao inclui dados pessoais do autor da denuncia.
 					"""

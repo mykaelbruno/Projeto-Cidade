@@ -180,7 +180,7 @@ export function ReportDetailPage() {
     ? '/prefeitura/perfil'
     : userType === 'secretaria'
       ? '/secretaria/perfil'
-      : userType === 'admin_app'
+      : userType === 'admin'
         ? '/admin-app/visao-geral'
         : userType === 'moderador'
           ? '/moderador/painel'

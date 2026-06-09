@@ -35,7 +35,7 @@ public record UsuarioAutenticado(
 	}
 
 	public boolean adminApp() {
-		return possuiPapel("ADMIN_APP");
+		return possuiPapel("ADMIN");
 	}
 
 	public boolean moderador() {
@@ -43,9 +43,8 @@ public record UsuarioAutenticado(
 	}
 
 	public boolean institucional() {
-		return possuiPapel("ADMIN_PREFEITURA")
-				|| possuiPapel("ADMIN_SECRETARIA")
-				|| possuiPapel("ATENDENTE_SECRETARIA");
+		return possuiPapel("PREFEITURA")
+				|| possuiPapel("SECRETARIA");
 	}
 
 	public boolean moderacaoGlobal() {

@@ -30,13 +30,11 @@ interface UsuarioInstitucionalFormState {
   username: string;
   senha: string;
   telefone: string;
-  papel: PapelUsuario;
 }
 
 interface VinculoExistenteFormState {
   usuarioId: string;
   organizacaoId: string;
-  papel: PapelUsuario;
   ativo: boolean;
 }
 
@@ -47,26 +45,22 @@ const emptyUsuarioInstitucionalForm: UsuarioInstitucionalFormState = {
   username: '',
   senha: '',
   telefone: '',
-  papel: 'ADMIN_PREFEITURA',
 };
 
 const emptyVinculoExistenteForm: VinculoExistenteFormState = {
   usuarioId: '',
   organizacaoId: '',
-  papel: 'ADMIN_PREFEITURA',
   ativo: true,
 };
 
 const papelLabels: Record<PapelUsuario, string> = {
-  ADMIN_PREFEITURA: 'Admin Prefeitura',
-  ADMIN_SECRETARIA: 'Admin Secretaria',
-  ATENDENTE_SECRETARIA: 'Atendente Secretaria',
+  PREFEITURA: 'Prefeitura',
+  SECRETARIA: 'Secretaria',
 };
 
 const papelColors: Record<PapelUsuario, string> = {
-  ADMIN_PREFEITURA: 'bg-purple-100 text-purple-700',
-  ADMIN_SECRETARIA: 'bg-indigo-100 text-indigo-700',
-  ATENDENTE_SECRETARIA: 'bg-blue-100 text-blue-700',
+  PREFEITURA: 'bg-purple-100 text-purple-700',
+  SECRETARIA: 'bg-indigo-100 text-indigo-700',
 };
 
 export function VinculosPage() {
@@ -89,7 +83,6 @@ export function VinculosPage() {
     useState<VinculoExistenteFormState>(emptyVinculoExistenteForm);
   const [vinculoEditando, setVinculoEditando] =
     useState<VinculoUsuarioOrganizacaoResponseDTO | null>(null);
-  const [papelEditando, setPapelEditando] = useState<PapelUsuario>('ADMIN_PREFEITURA');
   const [ativoEditando, setAtivoEditando] = useState(true);
   const [vinculoTransferindo, setVinculoTransferindo] =
     useState<VinculoUsuarioOrganizacaoResponseDTO | null>(null);
@@ -149,19 +142,6 @@ export function VinculosPage() {
     });
   }, [organizacaoMap, papelFilter, searchTerm, statusFilter, tipoFilter, vinculos]);
 
-  const selectedOrganizacaoNovoUsuario = novoUsuarioForm.organizacaoId
-    ? organizacaoMap.get(Number(novoUsuarioForm.organizacaoId))
-    : null;
-  const selectedOrganizacaoVinculoExistente = vinculoExistenteForm.organizacaoId
-    ? organizacaoMap.get(Number(vinculoExistenteForm.organizacaoId))
-    : null;
-
-  const papeisNovoUsuario = getPapeisPermitidos(selectedOrganizacaoNovoUsuario);
-  const papeisVinculoExistente = getPapeisPermitidos(selectedOrganizacaoVinculoExistente);
-  const papeisEditando = getPapeisPermitidos(
-    vinculoEditando ? organizacaoMap.get(vinculoEditando.organizacaoId) : null,
-  );
-
   const secretariasDestino = useMemo(() => {
     if (!vinculoTransferindo) return [];
     const origem = organizacaoMap.get(vinculoTransferindo.organizacaoId);
@@ -176,26 +156,6 @@ export function VinculosPage() {
     );
   }, [organizacaoMap, organizacoes, vinculoTransferindo]);
 
-  function handleOrganizacaoNovoUsuario(value: string) {
-    const organizacao = organizacaoMap.get(Number(value));
-    const papeis = getPapeisPermitidos(organizacao);
-    setNovoUsuarioForm((current) => ({
-      ...current,
-      organizacaoId: value,
-      papel: papeis[0] ?? 'ADMIN_PREFEITURA',
-    }));
-  }
-
-  function handleOrganizacaoVinculoExistente(value: string) {
-    const organizacao = organizacaoMap.get(Number(value));
-    const papeis = getPapeisPermitidos(organizacao);
-    setVinculoExistenteForm((current) => ({
-      ...current,
-      organizacaoId: value,
-      papel: papeis[0] ?? 'ADMIN_PREFEITURA',
-    }));
-  }
-
   async function criarUsuarioInstitucional() {
     if (!novoUsuarioForm.organizacaoId) return;
     setProcessando(true);
@@ -208,7 +168,6 @@ export function VinculosPage() {
         username: novoUsuarioForm.username.trim(),
         senha: novoUsuarioForm.senha,
         telefone: novoUsuarioForm.telefone.trim() || null,
-        papel: novoUsuarioForm.papel,
       });
       setFeedback('Usuario institucional criado e vinculado com sucesso.');
       setModalUsuarioAberto(false);
@@ -230,7 +189,6 @@ export function VinculosPage() {
       await vinculoService.criar({
         usuarioId: Number(vinculoExistenteForm.usuarioId),
         organizacaoId: Number(vinculoExistenteForm.organizacaoId),
-        papel: vinculoExistenteForm.papel,
         ativo: vinculoExistenteForm.ativo,
       });
       setFeedback('Usuario existente vinculado com sucesso.');
@@ -246,7 +204,6 @@ export function VinculosPage() {
 
   function abrirEdicao(vinculo: VinculoUsuarioOrganizacaoResponseDTO) {
     setVinculoEditando(vinculo);
-    setPapelEditando(vinculo.papel);
     setAtivoEditando(vinculo.ativo);
   }
 
@@ -257,7 +214,6 @@ export function VinculosPage() {
 
     try {
       await vinculoService.atualizar(vinculoEditando.id, {
-        papel: papelEditando,
         ativo: ativoEditando,
       });
       setFeedback('Vinculo atualizado com sucesso.');
@@ -276,7 +232,6 @@ export function VinculosPage() {
 
     try {
       await vinculoService.atualizar(vinculo.id, {
-        papel: vinculo.papel,
         ativo: !vinculo.ativo,
       });
       setFeedback(vinculo.ativo ? 'Vinculo inativado.' : 'Vinculo ativado.');
@@ -313,29 +268,26 @@ export function VinculosPage() {
   }
 
   const totalAtivos = vinculos.filter((vinculo) => vinculo.ativo).length;
-  const totalPrefeitura = vinculos.filter((vinculo) => vinculo.papel === 'ADMIN_PREFEITURA').length;
-  const totalSecretarias = vinculos.filter((vinculo) => {
-    const organizacao = organizacaoMap.get(vinculo.organizacaoId);
-    return organizacao?.tipo === 'SECRETARIA';
-  }).length;
+  const totalPrefeitura = vinculos.filter((vinculo) => vinculo.papel === 'PREFEITURA').length;
+  const totalSecretarias = vinculos.filter((vinculo) => vinculo.papel === 'SECRETARIA').length;
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-display font-bold text-foreground">Vinculos Institucionais</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-1 text-sm text-muted-foreground">
             Gerencie acessos institucionais de usuarios a prefeituras e secretarias.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Button variant="outline" className="gap-2" onClick={() => setModalVinculoExistenteAberto(true)}>
-            <Link2 className="w-4 h-4" />
-            Vincular Existente
+            <Link2 className="h-4 w-4" />
+            Vincular existente
           </Button>
           <Button className="gap-2" onClick={() => setModalUsuarioAberto(true)}>
-            <UserPlus className="w-4 h-4" />
-            Novo Usuario Institucional
+            <UserPlus className="h-4 w-4" />
+            Novo usuario institucional
           </Button>
         </div>
       </div>
@@ -346,18 +298,18 @@ export function VinculosPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Total de vinculos" value={vinculos.length} icon={<Link2 className="w-5 h-5" />} tone="bg-blue-100 text-blue-700" />
-        <StatCard label="Vinculos ativos" value={totalAtivos} icon={<Link2 className="w-5 h-5" />} tone="bg-green-100 text-green-700" />
-        <StatCard label="Admins prefeitura" value={totalPrefeitura} icon={<Link2 className="w-5 h-5" />} tone="bg-purple-100 text-purple-700" />
-        <StatCard label="Vinculos secretaria" value={totalSecretarias} icon={<Briefcase className="w-5 h-5" />} tone="bg-indigo-100 text-indigo-700" />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <StatCard label="Total de vinculos" value={vinculos.length} icon={<Link2 className="h-5 w-5" />} tone="bg-blue-100 text-blue-700" />
+        <StatCard label="Vinculos ativos" value={totalAtivos} icon={<Link2 className="h-5 w-5" />} tone="bg-green-100 text-green-700" />
+        <StatCard label="Vinculos prefeitura" value={totalPrefeitura} icon={<Link2 className="h-5 w-5" />} tone="bg-purple-100 text-purple-700" />
+        <StatCard label="Vinculos secretaria" value={totalSecretarias} icon={<Briefcase className="h-5 w-5" />} tone="bg-indigo-100 text-indigo-700" />
       </div>
 
       <Card className="shadow-sm">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_220px_180px_180px] gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px_180px_180px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
@@ -371,9 +323,8 @@ export function VinculosPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODOS">Todos os papeis</SelectItem>
-                <SelectItem value="ADMIN_PREFEITURA">Admin Prefeitura</SelectItem>
-                <SelectItem value="ADMIN_SECRETARIA">Admin Secretaria</SelectItem>
-                <SelectItem value="ATENDENTE_SECRETARIA">Atendente Secretaria</SelectItem>
+                <SelectItem value="PREFEITURA">Prefeitura</SelectItem>
+                <SelectItem value="SECRETARIA">Secretaria</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFiltro)}>
@@ -400,22 +351,22 @@ export function VinculosPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-sm overflow-hidden">
+      <Card className="overflow-hidden shadow-sm">
         {carregando ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Carregando vinculos...</div>
         ) : (
           <>
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full">
-                <thead className="bg-muted/50 border-b border-border">
+                <thead className="border-b border-border bg-muted/50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">ID</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Usuario</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Organizacao</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Tipo</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Papel</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Acoes</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Usuario</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Organizacao</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Tipo</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Papel</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Acoes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -434,7 +385,7 @@ export function VinculosPage() {
               </table>
             </div>
 
-            <div className="md:hidden divide-y divide-border">
+            <div className="divide-y divide-border md:hidden">
               {vinculosFiltrados.map((vinculo) => (
                 <VinculoMobileCard
                   key={vinculo.id}
@@ -453,7 +404,7 @@ export function VinculosPage() {
             )}
           </>
         )}
-        <div className="p-4 bg-muted/30 border-t border-border">
+        <div className="border-t border-border bg-muted/30 p-4">
           <p className="text-xs text-muted-foreground">
             Desativar vinculo nao desativa a conta do usuario. Usuarios existentes so podem receber vinculo quando estao ativos, possuem perfil MORADOR e nao tem outro vinculo institucional ativo.
           </p>
@@ -463,9 +414,9 @@ export function VinculosPage() {
       <Dialog open={modalVinculoExistenteAberto} onOpenChange={setModalVinculoExistenteAberto}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Vincular Usuario Existente</DialogTitle>
+            <DialogTitle>Vincular usuario existente</DialogTitle>
             <DialogDescription>
-              Informe o ID de um usuario morador ativo. O backend impede mais de um vinculo institucional ativo.
+              Informe o ID de um usuario morador ativo. O tipo do vinculo sera definido automaticamente pela organizacao escolhida.
             </DialogDescription>
           </DialogHeader>
 
@@ -485,7 +436,12 @@ export function VinculosPage() {
 
             <div>
               <Label className="mb-2 block">Organizacao</Label>
-              <Select value={vinculoExistenteForm.organizacaoId} onValueChange={handleOrganizacaoVinculoExistente}>
+              <Select
+                value={vinculoExistenteForm.organizacaoId}
+                onValueChange={(value) =>
+                  setVinculoExistenteForm((current) => ({ ...current, organizacaoId: value }))
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a organizacao" />
                 </SelectTrigger>
@@ -493,27 +449,6 @@ export function VinculosPage() {
                   {organizacoesAtivas.map((organizacao) => (
                     <SelectItem key={organizacao.id} value={String(organizacao.id)}>
                       {organizacao.nome} ({organizacao.tipo})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="mb-2 block">Papel</Label>
-              <Select
-                value={vinculoExistenteForm.papel}
-                onValueChange={(value) =>
-                  setVinculoExistenteForm((current) => ({ ...current, papel: value as PapelUsuario }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {papeisVinculoExistente.map((papel) => (
-                    <SelectItem key={papel} value={papel}>
-                      {papelLabels[papel]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -554,16 +489,21 @@ export function VinculosPage() {
       <Dialog open={modalUsuarioAberto} onOpenChange={setModalUsuarioAberto}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Novo Usuario Institucional</DialogTitle>
+            <DialogTitle>Novo usuario institucional</DialogTitle>
             <DialogDescription>
               Cria uma nova conta institucional ja vinculada a uma prefeitura ou secretaria.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
               <Label className="mb-2 block">Organizacao</Label>
-              <Select value={novoUsuarioForm.organizacaoId} onValueChange={handleOrganizacaoNovoUsuario}>
+              <Select
+                value={novoUsuarioForm.organizacaoId}
+                onValueChange={(value) =>
+                  setNovoUsuarioForm((current) => ({ ...current, organizacaoId: value }))
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a organizacao" />
                 </SelectTrigger>
@@ -581,21 +521,6 @@ export function VinculosPage() {
             <Field label="Email" value={novoUsuarioForm.email} onChange={(value) => setNovoUsuarioForm((current) => ({ ...current, email: value }))} />
             <Field label="Senha inicial" type="password" value={novoUsuarioForm.senha} onChange={(value) => setNovoUsuarioForm((current) => ({ ...current, senha: value }))} />
             <Field label="Telefone" value={novoUsuarioForm.telefone} onChange={(value) => setNovoUsuarioForm((current) => ({ ...current, telefone: value }))} />
-            <div>
-              <Label className="mb-2 block">Papel</Label>
-              <Select value={novoUsuarioForm.papel} onValueChange={(value) => setNovoUsuarioForm((current) => ({ ...current, papel: value as PapelUsuario }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {papeisNovoUsuario.map((papel) => (
-                    <SelectItem key={papel} value={papel}>
-                      {papelLabels[papel]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           <DialogFooter>
@@ -622,24 +547,15 @@ export function VinculosPage() {
       <Dialog open={vinculoEditando !== null} onOpenChange={(open) => !open && setVinculoEditando(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Vinculo</DialogTitle>
+            <DialogTitle>Editar vinculo</DialogTitle>
             <DialogDescription>{vinculoEditando?.nomeUsuario}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="mb-2 block">Papel</Label>
-              <Select value={papelEditando} onValueChange={(value) => setPapelEditando(value as PapelUsuario)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {papeisEditando.map((papel) => (
-                    <SelectItem key={papel} value={papel}>
-                      {papelLabels[papel]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="mb-2 block">Papel institucional</Label>
+              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
+                {vinculoEditando ? papelLabels[vinculoEditando.papel] : '-'}
+              </div>
             </div>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -701,26 +617,20 @@ export function VinculosPage() {
   );
 }
 
-function getPapeisPermitidos(organizacao: OrganizacaoResponseDTO | null | undefined): PapelUsuario[] {
-  if (!organizacao) return ['ADMIN_PREFEITURA', 'ADMIN_SECRETARIA', 'ATENDENTE_SECRETARIA'];
-  if (organizacao.tipo === 'PREFEITURA') return ['ADMIN_PREFEITURA'];
-  return ['ADMIN_SECRETARIA', 'ATENDENTE_SECRETARIA'];
-}
-
 function canTransferir(vinculo: VinculoUsuarioOrganizacaoResponseDTO, organizacao?: OrganizacaoResponseDTO) {
   return Boolean(
     organizacao &&
       organizacao.tipo === 'SECRETARIA' &&
       organizacao.organizacaoPaiId &&
-      (vinculo.papel === 'ADMIN_SECRETARIA' || vinculo.papel === 'ATENDENTE_SECRETARIA'),
+      vinculo.papel === 'SECRETARIA',
   );
 }
 
 function StatCard({ label, value, icon, tone }: { label: string; value: number; icon: ReactNode; tone: string }) {
   return (
     <Card className="shadow-sm">
-      <CardContent className="p-5 flex items-center gap-3">
-        <div className={`p-2.5 rounded-lg ${tone}`}>{icon}</div>
+      <CardContent className="flex items-center gap-3 p-5">
+        <div className={`rounded-lg p-2.5 ${tone}`}>{icon}</div>
         <div>
           <div className="text-2xl font-display font-bold text-foreground">{value}</div>
           <div className="text-xs text-muted-foreground">{label}</div>
@@ -746,8 +656,8 @@ function VinculoRow({
   onTransfer: () => void;
 }) {
   return (
-    <tr className="hover:bg-muted/50 transition-colors">
-      <td className="px-4 py-3 text-sm text-muted-foreground font-mono">#{vinculo.id}</td>
+    <tr className="transition-colors hover:bg-muted/50">
+      <td className="px-4 py-3 font-mono text-sm text-muted-foreground">#{vinculo.id}</td>
       <td className="px-4 py-3 text-sm font-medium text-foreground">
         {vinculo.nomeUsuario}
         <span className="block text-xs text-muted-foreground">Usuario #{vinculo.usuarioId}</span>
@@ -769,10 +679,10 @@ function VinculoRow({
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-2">
           <Button variant="ghost" size="icon" onClick={onEdit} disabled={processando} title="Editar">
-            <Edit className="w-4 h-4" />
+            <Edit className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={onActivation} disabled={processando} title="Ativar/Inativar">
-            <Power className="w-4 h-4" />
+            <Power className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -781,7 +691,7 @@ function VinculoRow({
             disabled={processando || !canTransferir(vinculo, organizacao)}
             title="Transferir secretaria"
           >
-            <ArrowRightLeft className="w-4 h-4" />
+            <ArrowRightLeft className="h-4 w-4" />
           </Button>
         </div>
       </td>
@@ -793,7 +703,7 @@ function VinculoMobileCard(props: Parameters<typeof VinculoRow>[0]) {
   const { vinculo, organizacao, processando, onEdit, onActivation, onTransfer } = props;
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="space-y-3 p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="font-medium text-foreground">{vinculo.nomeUsuario}</h3>
@@ -812,13 +722,13 @@ function VinculoMobileCard(props: Parameters<typeof VinculoRow>[0]) {
       </div>
       <div className="flex justify-end gap-1">
         <Button variant="ghost" size="icon" onClick={onEdit} disabled={processando}>
-          <Edit className="w-4 h-4" />
+          <Edit className="h-4 w-4" />
         </Button>
         <Button variant="ghost" size="icon" onClick={onActivation} disabled={processando}>
-          <Power className="w-4 h-4" />
+          <Power className="h-4 w-4" />
         </Button>
         <Button variant="ghost" size="icon" onClick={onTransfer} disabled={processando || !canTransferir(vinculo, organizacao)}>
-          <ArrowRightLeft className="w-4 h-4" />
+          <ArrowRightLeft className="h-4 w-4" />
         </Button>
       </div>
     </div>

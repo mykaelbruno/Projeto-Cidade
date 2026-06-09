@@ -10,9 +10,6 @@ public record VinculoUsuarioOrganizacaoCreateRequestDTO(
 		@NotNull
 		Long organizacaoId,
 
-		@NotNull
-		PapelUsuario papel,
-
 		Boolean ativo
 ) {
 }

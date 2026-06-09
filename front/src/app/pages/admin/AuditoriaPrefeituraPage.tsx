@@ -57,7 +57,7 @@ function formatDate(value: string) {
 export function AuditoriaPrefeituraPage() {
   const { vinculosOperacionais } = useUser();
   const prefeituraId = vinculosOperacionais.find((vinculo) =>
-    vinculo.ativo && vinculo.papel === 'ADMIN_PREFEITURA')?.organizacaoId;
+    vinculo.ativo && vinculo.papel === 'PREFEITURA')?.organizacaoId;
 
   const [pagina, setPagina] = useState<PageResponse<AuditoriaResponseDTO> | null>(null);
   const [acao, setAcao] = useState<TipoAcaoAuditoria | ''>('');

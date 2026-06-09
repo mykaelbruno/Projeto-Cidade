@@ -193,7 +193,6 @@ public final class OpenApiExemplos {
 			  "email": "ana.secretaria@example.com",
 			  "username": "ana_secretaria",
 			  "senha": "senha-segura",
-			  "papel": "ADMIN_SECRETARIA",
 			  "telefone": "83999990000"
 			}
 			""";
@@ -248,7 +247,6 @@ public final class OpenApiExemplos {
 
 	public static final String VINCULO_UPDATE = """
 			{
-			  "papel": "ADMIN_SECRETARIA",
 			  "ativo": true
 			}
 			""";
@@ -257,7 +255,6 @@ public final class OpenApiExemplos {
 			{
 			  "usuarioId": 10,
 			  "organizacaoId": 3,
-			  "papel": "ATENDENTE_SECRETARIA",
 			  "ativo": true
 			}
 			""";

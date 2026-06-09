@@ -38,6 +38,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.transaction.annotation.Transactional
 class DenunciaListagemIntegrationTest {
 
 	private static final AtomicInteger SEQUENCIA = new AtomicInteger();
@@ -88,7 +89,7 @@ class DenunciaListagemIntegrationTest {
 		Organizacao prefeitura = prefeitura();
 		Organizacao secretariaObras = secretaria(prefeitura);
 		Organizacao secretariaSaude = secretaria(prefeitura);
-		vinculo(adminPrefeitura, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+		vinculo(adminPrefeitura, prefeitura, PapelUsuario.PREFEITURA);
 		Categoria categoriaObras = categoria();
 		Categoria categoriaSaude = categoria();
 		Denuncia denunciaEsperada = denuncia(
@@ -110,7 +111,7 @@ class DenunciaListagemIntegrationTest {
 						.param("bairro", "Bairro Operacional")
 						.param("status", "EM_ANALISE")
 						.param("categoriaId", categoriaObras.getId().toString())
-						.with(jwtUsuario(adminPrefeitura, "MORADOR", "ADMIN_PREFEITURA")))
+						.with(jwtUsuario(adminPrefeitura, "MORADOR", "PREFEITURA")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.content", hasSize(1)))
 				.andExpect(jsonPath("$.content[0].id").value(denunciaEsperada.getId()));

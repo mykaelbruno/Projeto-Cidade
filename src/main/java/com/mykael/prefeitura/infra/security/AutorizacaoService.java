@@ -31,7 +31,7 @@ public class AutorizacaoService {
 		}
 
 		boolean possuiVinculo = vinculoRepository
-				.existsByUsuarioIdAndOrganizacaoIdAndPapelAndAtivoTrue(usuarioId, prefeituraId, PapelUsuario.ADMIN_PREFEITURA);
+				.existsByUsuarioIdAndOrganizacaoIdAndPapelAndAtivoTrue(usuarioId, prefeituraId, PapelUsuario.PREFEITURA);
 
 		if (!possuiVinculo) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario nao possui permissao sobre esta prefeitura.");

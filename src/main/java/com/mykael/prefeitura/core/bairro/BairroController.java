@@ -42,7 +42,7 @@ public class BairroController implements BairroControllerOpenApi {
 
 	@Override
 	@GetMapping
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public List<BairroResponseDTO> listarParaGestao(
 			@PathVariable Long prefeituraId,
 			@AuthenticationPrincipal Jwt jwt
@@ -53,7 +53,7 @@ public class BairroController implements BairroControllerOpenApi {
 
 	@Override
 	@PostMapping
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<BairroResponseDTO> criar(
 			@PathVariable Long prefeituraId,
 			@Valid @RequestBody BairroCreateRequestDTO request,
@@ -65,7 +65,7 @@ public class BairroController implements BairroControllerOpenApi {
 
 	@Override
 	@PutMapping("/{bairroId}")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<BairroResponseDTO> atualizar(
 			@PathVariable Long prefeituraId,
 			@PathVariable Long bairroId,
@@ -79,7 +79,7 @@ public class BairroController implements BairroControllerOpenApi {
 
 	@Override
 	@PatchMapping("/{bairroId}/ativacao")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<BairroResponseDTO> alterarAtivo(
 			@PathVariable Long prefeituraId,
 			@PathVariable Long bairroId,
@@ -109,6 +109,6 @@ public class BairroController implements BairroControllerOpenApi {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		return authentication != null && authentication.getAuthorities()
 				.stream()
-				.anyMatch(authority -> "ROLE_ADMIN_APP".equals(authority.getAuthority()));
+				.anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
 	}
 }

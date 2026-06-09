@@ -38,7 +38,7 @@ public interface BairroControllerOpenApi {
 			@Parameter(description = "Identificador da prefeitura.", in = ParameterIn.PATH) Long prefeituraId
 	);
 
-	@Operation(summary = "Lista bairros da prefeitura", description = "Permite que ADMIN_APP ou ADMIN_PREFEITURA liste bairros ativos e inativos da prefeitura.")
+	@Operation(summary = "Lista bairros da prefeitura", description = "Permite que ADMIN ou PREFEITURA liste bairros ativos e inativos da prefeitura.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Bairros retornados.")
 	List<BairroResponseDTO> listarParaGestao(
@@ -46,7 +46,7 @@ public interface BairroControllerOpenApi {
 			Jwt jwt
 	);
 
-	@Operation(summary = "Cria bairro", description = "Permite que ADMIN_APP ou ADMIN_PREFEITURA cadastre um bairro da cidade. O centroide geografico e opcional e pode ser usado pelo frontend para centralizar mapas.")
+	@Operation(summary = "Cria bairro", description = "Permite que ADMIN ou PREFEITURA cadastre um bairro da cidade. O centroide geografico e opcional e pode ser usado pelo frontend para centralizar mapas.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "201", description = "Bairro criado.")
 	ResponseEntity<BairroResponseDTO> criar(
@@ -57,7 +57,7 @@ public interface BairroControllerOpenApi {
 			Jwt jwt
 	);
 
-	@Operation(summary = "Atualiza bairro", description = "Permite que ADMIN_APP ou ADMIN_PREFEITURA altere o nome e o centroide opcional de um bairro.")
+	@Operation(summary = "Atualiza bairro", description = "Permite que ADMIN ou PREFEITURA altere o nome e o centroide opcional de um bairro.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Bairro atualizado.")
 	ResponseEntity<BairroResponseDTO> atualizar(
@@ -69,7 +69,7 @@ public interface BairroControllerOpenApi {
 			Jwt jwt
 	);
 
-	@Operation(summary = "Ativa ou desativa bairro", description = "Permite que ADMIN_APP ou ADMIN_PREFEITURA controle se o bairro aparece nas listas de cadastro e denuncia.")
+	@Operation(summary = "Ativa ou desativa bairro", description = "Permite que ADMIN ou PREFEITURA controle se o bairro aparece nas listas de cadastro e denuncia.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Ativacao do bairro alterada.")
 	ResponseEntity<BairroResponseDTO> alterarAtivo(

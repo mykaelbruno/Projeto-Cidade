@@ -41,7 +41,7 @@ public class UsuarioController implements UsuarioControllerOpenApi {
 
 	@Override
 	@GetMapping
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public List<UsuarioResponseDTO> listar(
 			@RequestParam(required = false) String termo,
 			@RequestParam(required = false) PerfilUsuario perfilGlobal,
@@ -55,7 +55,7 @@ public class UsuarioController implements UsuarioControllerOpenApi {
 
 	@Override
 	@PostMapping
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<UsuarioResponseDTO> criar(@Valid @RequestBody UsuarioCreateRequestDTO request) {
 		validarCidadeOperador(request.cidade());
 		Usuario usuario = usuarioService.criarUsuario(request);
@@ -64,7 +64,7 @@ public class UsuarioController implements UsuarioControllerOpenApi {
 
 	@Override
 	@PutMapping("/{usuarioId}")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<UsuarioResponseDTO> atualizar(
 			@PathVariable Long usuarioId,
 			@Valid @RequestBody UsuarioUpdateRequestDTO request
@@ -76,7 +76,7 @@ public class UsuarioController implements UsuarioControllerOpenApi {
 
 	@Override
 	@PatchMapping("/{usuarioId}/ativacao")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<UsuarioResponseDTO> alterarAtivo(
 			@PathVariable Long usuarioId,
 			@RequestBody AtivacaoRequestDTO request
@@ -102,7 +102,7 @@ public class UsuarioController implements UsuarioControllerOpenApi {
 			
 			var vinculos = vinculoRepository.findByUsuarioIdAndAtivoTrue(operadorId);
 			var vinculoPrefeitura = vinculos.stream()
-					.filter(v -> v.getPapel() == PapelUsuario.ADMIN_PREFEITURA)
+					.filter(v -> v.getPapel() == PapelUsuario.PREFEITURA)
 					.findFirst();
 
 			if (vinculoPrefeitura.isPresent()) {
@@ -119,7 +119,7 @@ public class UsuarioController implements UsuarioControllerOpenApi {
 			
 			var vinculos = vinculoRepository.findByUsuarioIdAndAtivoTrue(operadorId);
 			var vinculoPrefeitura = vinculos.stream()
-					.filter(v -> v.getPapel() == PapelUsuario.ADMIN_PREFEITURA)
+					.filter(v -> v.getPapel() == PapelUsuario.PREFEITURA)
 					.findFirst();
 
 			if (vinculoPrefeitura.isPresent()) {

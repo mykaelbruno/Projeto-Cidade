@@ -47,7 +47,7 @@ public class VinculoUsuarioOrganizacaoController implements VinculoUsuarioOrgani
 
 	@Override
 	@GetMapping
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public List<VinculoUsuarioOrganizacaoResponseDTO> listar() {
 		var authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
@@ -57,7 +57,7 @@ public class VinculoUsuarioOrganizacaoController implements VinculoUsuarioOrgani
 
 			var vinculos = vinculoService.listarPorUsuario(operadorId);
 			var vinculoPrefeitura = vinculos.stream()
-					.filter(v -> v.getPapel() == PapelUsuario.ADMIN_PREFEITURA)
+					.filter(v -> v.getPapel() == PapelUsuario.PREFEITURA)
 					.findFirst();
 
 			if (vinculoPrefeitura.isPresent()) {
@@ -81,7 +81,7 @@ public class VinculoUsuarioOrganizacaoController implements VinculoUsuarioOrgani
 
 	@Override
 	@PostMapping
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<VinculoUsuarioOrganizacaoResponseDTO> criar(
 			@Valid @RequestBody VinculoUsuarioOrganizacaoCreateRequestDTO request,
 			@AuthenticationPrincipal Jwt jwt
@@ -96,12 +96,24 @@ public class VinculoUsuarioOrganizacaoController implements VinculoUsuarioOrgani
 
 	@Override
 	@GetMapping("/organizacoes/{organizacaoId}")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA') or hasRole('SECRETARIA')")
 	public List<VinculoUsuarioOrganizacaoResponseDTO> listarPorOrganizacao(
 			@PathVariable Long organizacaoId,
 			@AuthenticationPrincipal Jwt jwt
 	) {
-		autorizacaoService.exigirAcessoDaPrefeituraAoDestino(usuarioId(jwt), organizacaoId, isAdminApp());
+		boolean isPrefeituraOrAdmin = isAdminApp() || SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+				.stream().anyMatch(auth -> "ROLE_PREFEITURA".equals(auth.getAuthority()));
+		
+		if (!isPrefeituraOrAdmin) {
+			boolean possessesActiveVinculo = vinculoService.listarPorUsuario(usuarioId(jwt)).stream()
+					.anyMatch(v -> v.getOrganizacao().getId().equals(organizacaoId) && v.isAtivo());
+			if (!possessesActiveVinculo) {
+				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario nao possui permissao para visualizar os vinculos desta organizacao.");
+			}
+		} else {
+			autorizacaoService.exigirAcessoDaPrefeituraAoDestino(usuarioId(jwt), organizacaoId, isAdminApp());
+		}
+
 		return vinculoService.listarPorOrganizacao(organizacaoId)
 				.stream()
 				.map(VinculoUsuarioOrganizacaoResponseDTO::from)
@@ -110,7 +122,7 @@ public class VinculoUsuarioOrganizacaoController implements VinculoUsuarioOrgani
 
 	@Override
 	@PutMapping("/{vinculoId}")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<VinculoUsuarioOrganizacaoResponseDTO> atualizar(
 			@PathVariable Long vinculoId,
 			@Valid @RequestBody VinculoUsuarioOrganizacaoUpdateRequestDTO request,
@@ -127,7 +139,7 @@ public class VinculoUsuarioOrganizacaoController implements VinculoUsuarioOrgani
 
 	@Override
 	@PatchMapping("/{vinculoId}/secretaria")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<VinculoUsuarioOrganizacaoResponseDTO> transferirSecretaria(
 			@PathVariable Long vinculoId,
 			@Valid @RequestBody VinculoTransferenciaSecretariaRequestDTO request,
@@ -167,6 +179,6 @@ public class VinculoUsuarioOrganizacaoController implements VinculoUsuarioOrgani
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		return authentication != null && authentication.getAuthorities()
 				.stream()
-				.anyMatch(authority -> "ROLE_ADMIN_APP".equals(authority.getAuthority()));
+				.anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
 	}
 }

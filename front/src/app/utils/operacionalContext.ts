@@ -5,7 +5,7 @@ export function getVinculoOperacionalAtivo(
   vinculos: VinculoUsuarioOrganizacaoResponseDTO[],
 ) {
   if (userType === 'prefeitura') {
-    return vinculos.find((vinculo) => vinculo.ativo && vinculo.papel === 'ADMIN_PREFEITURA') ?? null;
+    return vinculos.find((vinculo) => vinculo.ativo && vinculo.papel === 'PREFEITURA') ?? null;
   }
 
   if (userType === 'secretaria') {
@@ -13,7 +13,7 @@ export function getVinculoOperacionalAtivo(
       vinculos.find(
         (vinculo) =>
           vinculo.ativo &&
-          (vinculo.papel === 'ADMIN_SECRETARIA' || vinculo.papel === 'ATENDENTE_SECRETARIA'),
+          vinculo.papel === 'SECRETARIA',
       ) ?? null
     );
   }

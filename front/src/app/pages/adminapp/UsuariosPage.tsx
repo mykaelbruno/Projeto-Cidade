@@ -45,13 +45,13 @@ const emptyForm: UsuarioFormState = {
 };
 
 const perfilLabels: Record<PerfilUsuario, string> = {
-  ADMIN_APP: 'Admin App',
+  ADMIN: 'Admin',
   MODERADOR: 'Moderador',
   MORADOR: 'Morador',
 };
 
 const perfilColors: Record<PerfilUsuario, string> = {
-  ADMIN_APP: 'bg-red-100 text-red-700',
+  ADMIN: 'bg-red-100 text-red-700',
   MODERADOR: 'bg-purple-100 text-purple-700',
   MORADOR: 'bg-blue-100 text-blue-700',
 };
@@ -173,7 +173,7 @@ export function UsuariosPage() {
     }
   }
 
-  const totalAdmins = usuarios.filter((usuario) => usuario.perfilGlobal === 'ADMIN_APP').length;
+  const totalAdmins = usuarios.filter((usuario) => usuario.perfilGlobal === 'ADMIN').length;
   const totalModeradores = usuarios.filter((usuario) => usuario.perfilGlobal === 'MODERADOR').length;
   const totalAtivos = usuarios.filter((usuario) => usuario.ativo).length;
 
@@ -223,7 +223,7 @@ export function UsuariosPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODOS">Todos os perfis</SelectItem>
-                <SelectItem value="ADMIN_APP">Admin App</SelectItem>
+                <SelectItem value="ADMIN">Admin</SelectItem>
                 <SelectItem value="MODERADOR">Moderador</SelectItem>
                 <SelectItem value="MORADOR">Morador</SelectItem>
               </SelectContent>
@@ -364,7 +364,7 @@ export function UsuariosPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ADMIN_APP">Admin App</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
                   <SelectItem value="MODERADOR">Moderador</SelectItem>
                   <SelectItem value="MORADOR">Morador</SelectItem>
                 </SelectContent>

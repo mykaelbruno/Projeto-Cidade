@@ -102,7 +102,7 @@ public class NotificacaoService {
 	) {
 		List<Usuario> usuarios = new ArrayList<>();
 		usuarios.addAll(usuarioRepository.findByPerfilGlobalAndAtivoTrue(PerfilUsuario.MODERADOR));
-		usuarios.addAll(usuarioRepository.findByPerfilGlobalAndAtivoTrue(PerfilUsuario.ADMIN_APP));
+		usuarios.addAll(usuarioRepository.findByPerfilGlobalAndAtivoTrue(PerfilUsuario.ADMIN));
 		notificarUsuarios(usuarios, denuncia, tipo, titulo, mensagem, link);
 	}
 

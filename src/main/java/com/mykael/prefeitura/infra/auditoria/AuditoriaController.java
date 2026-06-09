@@ -30,7 +30,7 @@ public class AuditoriaController implements AuditoriaControllerOpenApi {
 
 	@Override
 	@GetMapping
-	@PreAuthorize("hasRole('ADMIN_APP')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public Page<AuditoriaResponseDTO> listar(
 			@RequestParam(required = false) TipoAcaoAuditoria acao,
 			@RequestParam(required = false) TipoAlvoAuditoria alvoTipo,
@@ -42,7 +42,7 @@ public class AuditoriaController implements AuditoriaControllerOpenApi {
 	}
 
 	@GetMapping("/prefeituras/{prefeituraId}")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public Page<AuditoriaResponseDTO> listarDaPrefeitura(
 			@PathVariable Long prefeituraId,
 			@RequestParam(required = false) TipoAcaoAuditoria acao,
@@ -64,6 +64,6 @@ public class AuditoriaController implements AuditoriaControllerOpenApi {
 		return SecurityContextHolder.getContext().getAuthentication() != null
 				&& SecurityContextHolder.getContext().getAuthentication().getAuthorities()
 				.stream()
-				.anyMatch(authority -> "ROLE_ADMIN_APP".equals(authority.getAuthority()));
+				.anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
 	}
 }

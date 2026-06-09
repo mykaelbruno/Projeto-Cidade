@@ -35,7 +35,7 @@ const quickActions = [
   },
   {
     label: 'Criar usuario global',
-    description: 'Admin App, moderador ou morador',
+    description: 'Admin, moderador ou morador',
     icon: Users,
     path: '/admin-app/usuarios',
     tone: 'bg-blue-100 text-blue-700',
@@ -302,7 +302,7 @@ export function VisaoGeralPage() {
               </div>
               <div>
                 <h3 className="font-display font-semibold text-foreground">
-                  Escopo atual do Admin App
+                  Escopo atual do Admin
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   Esta visao foi mantida como painel administrativo simples. Nao ha analytics detalhado aqui por decisao de produto;

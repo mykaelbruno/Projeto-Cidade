@@ -113,7 +113,7 @@ public interface DenunciaControllerOpenApi {
 			description = """
 					Retorna os dados publicos de uma denuncia especifica.
 					Denuncia anonima nao expoe dados do autor. Denuncia ARQUIVADA so fica visivel para autor, moderacao,
-					ADMIN_APP ou usuario institucional responsavel.
+					ADMIN ou usuario institucional responsavel.
 					"""
 	)
 	@SecurityRequirement(name = "cookieAuth")
@@ -162,7 +162,7 @@ public interface DenunciaControllerOpenApi {
 			Jwt jwt
 	);
 
-	@Operation(summary = "Exclui denuncia pelo autor", description = "Permite que o morador autor ou um ADMIN_APP exclua (arquive) a sua propria denuncia.")
+	@Operation(summary = "Exclui denuncia pelo autor", description = "Permite que o morador autor ou um ADMIN exclua (arquive) a sua propria denuncia.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "204", description = "Denuncia excluida com sucesso.")
 	ResponseEntity<Void> deletar(

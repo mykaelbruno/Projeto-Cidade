@@ -115,7 +115,7 @@ public class DenunciaController implements DenunciaControllerOpenApi {
 
 	@Override
 	@PatchMapping("/{id}/status")
-	@PreAuthorize("hasAnyRole('ADMIN_PREFEITURA', 'ADMIN_SECRETARIA', 'ATENDENTE_SECRETARIA')")
+	@PreAuthorize("hasAnyRole('PREFEITURA', 'SECRETARIA')")
 	public ResponseEntity<DenunciaResponseDTO> atualizarStatus(
 			@PathVariable Long id,
 			@Valid @RequestBody StatusDenunciaUpdateRequestDTO request,
@@ -148,7 +148,7 @@ public class DenunciaController implements DenunciaControllerOpenApi {
 
 	@Override
 	@DeleteMapping("/{id}")
-	@PreAuthorize("hasRole('MORADOR') or hasRole('ADMIN_APP')")
+	@PreAuthorize("hasRole('MORADOR') or hasRole('ADMIN')")
 	public ResponseEntity<Void> deletar(
 			@PathVariable Long id,
 			@AuthenticationPrincipal Jwt jwt
@@ -156,7 +156,7 @@ public class DenunciaController implements DenunciaControllerOpenApi {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		boolean isAdminApp = authentication != null && authentication.getAuthorities()
 				.stream()
-				.anyMatch(authority -> "ROLE_ADMIN_APP".equals(authority.getAuthority()));
+				.anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
 		
 		denunciaService.deletar(id, Long.valueOf(jwt.getSubject()), isAdminApp);
 		return ResponseEntity.noContent().build();

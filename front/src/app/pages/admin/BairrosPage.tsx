@@ -28,7 +28,7 @@ function normalize(value: string) {
 export function BairrosPage() {
   const { vinculosOperacionais } = useUser();
   const prefeituraId = vinculosOperacionais.find((vinculo) =>
-    vinculo.ativo && vinculo.papel === 'ADMIN_PREFEITURA')?.organizacaoId;
+    vinculo.ativo && vinculo.papel === 'PREFEITURA')?.organizacaoId;
 
   const [prefeitura, setPrefeitura] = useState<OrganizacaoResponseDTO | null>(null);
   const [bairros, setBairros] = useState<BairroResponseDTO[]>([]);

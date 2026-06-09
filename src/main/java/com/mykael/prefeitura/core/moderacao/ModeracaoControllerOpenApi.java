@@ -25,7 +25,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 @ApiResponses({
 		@ApiResponse(responseCode = "400", description = "Requisicao invalida.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class), examples = @ExampleObject(value = OpenApiExemplos.ERRO_VALIDACAO))),
 		@ApiResponse(responseCode = "401", description = "Autenticacao obrigatoria.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class))),
-		@ApiResponse(responseCode = "403", description = "Apenas ADMIN_APP ou MODERADOR.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class))),
+		@ApiResponse(responseCode = "403", description = "Apenas ADMIN ou MODERADOR.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class))),
 		@ApiResponse(responseCode = "404", description = "Denuncia, comentario ou usuario nao encontrado.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class))),
 		@ApiResponse(responseCode = "409", description = "Conflito de estado, como usuario ja suspenso ou comentario ja removido.", content = @Content(schema = @Schema(implementation = ErroApiResponse.class)))
 })
@@ -34,7 +34,7 @@ public interface ModeracaoControllerOpenApi {
 	@Operation(
 			summary = "Arquiva denuncia por moderacao",
 			description = """
-					Permite que ADMIN_APP ou MODERADOR arquive uma denuncia com motivo obrigatorio.
+					Permite que ADMIN ou MODERADOR arquive uma denuncia com motivo obrigatorio.
 					A acao altera o status para ARQUIVADO e registra evento destacado na timeline.
 					"""
 	)
@@ -51,7 +51,7 @@ public interface ModeracaoControllerOpenApi {
 	@Operation(
 			summary = "Remove comentario por moderacao",
 			description = """
-					Permite que ADMIN_APP ou MODERADOR remova logicamente um comentario com motivo obrigatorio.
+					Permite que ADMIN ou MODERADOR remova logicamente um comentario com motivo obrigatorio.
 					A acao mantem auditoria, reduz o contador de comentarios da denuncia e registra evento na timeline.
 					"""
 	)
@@ -68,8 +68,8 @@ public interface ModeracaoControllerOpenApi {
 	@Operation(
 			summary = "Adverte usuario",
 			description = """
-					Permite que ADMIN_APP ou MODERADOR registre uma advertencia no historico do usuario.
-					A advertencia nao suspende a conta. MODERADOR so pode advertir MORADOR; contas administrativas ou moderadores exigem ADMIN_APP.
+					Permite que ADMIN ou MODERADOR registre uma advertencia no historico do usuario.
+					A advertencia nao suspende a conta. MODERADOR so pode advertir MORADOR; contas administrativas ou moderadores exigem ADMIN.
 					"""
 	)
 	@SecurityRequirement(name = "cookieAuth")
@@ -85,8 +85,8 @@ public interface ModeracaoControllerOpenApi {
 	@Operation(
 			summary = "Suspende usuario",
 			description = """
-					Permite que ADMIN_APP ou MODERADOR suspenda uma conta, marcando o usuario como inativo.
-					MODERADOR so pode suspender MORADOR. O ultimo ADMIN_APP ativo nao pode ser suspenso.
+					Permite que ADMIN ou MODERADOR suspenda uma conta, marcando o usuario como inativo.
+					MODERADOR so pode suspender MORADOR. O ultimo ADMIN ativo nao pode ser suspenso.
 					"""
 	)
 	@SecurityRequirement(name = "cookieAuth")
@@ -102,8 +102,8 @@ public interface ModeracaoControllerOpenApi {
 	@Operation(
 			summary = "Reativa usuario",
 			description = """
-					Permite que ADMIN_APP ou MODERADOR reative uma conta suspensa.
-					MODERADOR so pode reativar MORADOR; contas administrativas ou moderadores exigem ADMIN_APP.
+					Permite que ADMIN ou MODERADOR reative uma conta suspensa.
+					MODERADOR so pode reativar MORADOR; contas administrativas ou moderadores exigem ADMIN.
 					"""
 	)
 	@SecurityRequirement(name = "cookieAuth")

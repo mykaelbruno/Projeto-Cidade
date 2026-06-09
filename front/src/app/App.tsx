@@ -187,42 +187,42 @@ export default function App() {
         <Route element={<AdminAppLayout />}>
           <Route path="/admin-app" element={<Navigate to="/admin-app/visao-geral" replace />} />
           <Route path="/admin-app/visao-geral" element={
-            <RouteGuard allowedRoles={['admin_app']}>
+            <RouteGuard allowedRoles={['admin']}>
               <VisaoGeralPage />
             </RouteGuard>
           } />
           <Route path="/admin-app/organizacoes" element={
-            <RouteGuard allowedRoles={['admin_app']}>
+            <RouteGuard allowedRoles={['admin']}>
               <OrganizacoesPage />
             </RouteGuard>
           } />
           <Route path="/admin-app/usuarios" element={
-            <RouteGuard allowedRoles={['admin_app']}>
+            <RouteGuard allowedRoles={['admin']}>
               <UsuariosPage />
             </RouteGuard>
           } />
           <Route path="/admin-app/vinculos" element={
-            <RouteGuard allowedRoles={['admin_app']}>
+            <RouteGuard allowedRoles={['admin']}>
               <VinculosPage />
             </RouteGuard>
           } />
           <Route path="/admin-app/categorias" element={
-            <RouteGuard allowedRoles={['admin_app']}>
+            <RouteGuard allowedRoles={['admin']}>
               <CategoriasPage />
             </RouteGuard>
           } />
           <Route path="/admin-app/moderacao" element={
-            <RouteGuard allowedRoles={['admin_app']}>
+            <RouteGuard allowedRoles={['admin']}>
               <ModeracaoPage />
             </RouteGuard>
           } />
           <Route path="/admin-app/relato/:id" element={
-            <RouteGuard allowedRoles={['admin_app']}>
+            <RouteGuard allowedRoles={['admin']}>
               <ReportDetailPage />
             </RouteGuard>
           } />
           <Route path="/admin-app/auditoria" element={
-            <RouteGuard allowedRoles={['admin_app']}>
+            <RouteGuard allowedRoles={['admin']}>
               <AuditoriaPage />
             </RouteGuard>
           } />

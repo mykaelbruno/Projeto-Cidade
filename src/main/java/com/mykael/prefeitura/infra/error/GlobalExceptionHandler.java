@@ -13,8 +13,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
 	@ExceptionHandler(ResponseStatusException.class)
 	ResponseEntity<ErroApiResponse> tratarResponseStatusException(ResponseStatusException exception, HttpServletRequest request) {
@@ -73,6 +78,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	ResponseEntity<ErroApiResponse> tratarErroInesperado(Exception exception, HttpServletRequest request) {
+		log.error("Erro inesperado no servidor ao processar URL: {}", request.getRequestURI(), exception);
 		var status = HttpStatus.INTERNAL_SERVER_ERROR;
 		var response = new ErroApiResponse(
 				Instant.now(),

@@ -45,7 +45,7 @@ public interface OrganizacaoControllerOpenApi {
 	@ApiResponse(responseCode = "200", description = "Prefeituras retornadas.")
 	ResponseEntity<List<OrganizacaoResponseDTO>> listarPrefeiturasAtivas();
 
-	@Operation(summary = "Cria prefeitura", description = "Permite que ADMIN_APP cadastre uma prefeitura.")
+	@Operation(summary = "Cria prefeitura", description = "Permite que ADMIN cadastre uma prefeitura.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "201", description = "Prefeitura criada.")
 	ResponseEntity<OrganizacaoResponseDTO> criarPrefeitura(
@@ -54,7 +54,7 @@ public interface OrganizacaoControllerOpenApi {
 			PrefeituraCreateRequestDTO request
 	);
 
-	@Operation(summary = "Cria secretaria", description = "Permite que ADMIN_APP ou ADMIN_PREFEITURA crie uma secretaria vinculada a uma prefeitura.")
+	@Operation(summary = "Cria secretaria", description = "Permite que ADMIN ou PREFEITURA crie uma secretaria vinculada a uma prefeitura.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "201", description = "Secretaria criada.")
 	ResponseEntity<OrganizacaoResponseDTO> criarSecretaria(
@@ -65,7 +65,7 @@ public interface OrganizacaoControllerOpenApi {
 			Jwt jwt
 	);
 
-	@Operation(summary = "Cria usuario institucional", description = "Cria usuario e vinculo institucional. Prefeitura aceita ADMIN_PREFEITURA; secretaria aceita ADMIN_SECRETARIA ou ATENDENTE_SECRETARIA.")
+	@Operation(summary = "Cria usuario institucional", description = "Cria usuario e vinculo institucional. Prefeitura aceita PREFEITURA; secretaria aceita SECRETARIA ou SECRETARIA.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "201", description = "Usuario institucional e vinculo criados.")
 	ResponseEntity<VinculoUsuarioOrganizacaoResponseDTO> criarUsuarioInstitucional(

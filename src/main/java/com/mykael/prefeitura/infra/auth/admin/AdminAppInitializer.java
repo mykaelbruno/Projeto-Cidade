@@ -47,7 +47,7 @@ public class AdminAppInitializer implements ApplicationRunner {
 		admin.setSenhaHash(passwordEncoder.encode(properties.senha()));
 		admin.setCidade(valorOuPadrao(properties.cidade(), "Sistema"));
 		admin.setBairro(valorOuPadrao(properties.bairro(), "Sistema"));
-		admin.setPerfilGlobal(PerfilUsuario.ADMIN_APP);
+		admin.setPerfilGlobal(PerfilUsuario.ADMIN);
 
 		usuarioRepository.save(admin);
 	}

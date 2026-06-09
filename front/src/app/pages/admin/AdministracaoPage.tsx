@@ -30,25 +30,20 @@ import { getApiErrorMessage } from '../../services/apiClient';
 import { categoriaService } from '../../services/categoriaService';
 import { organizacaoService } from '../../services/organizacaoService';
 import { vinculoService } from '../../services/vinculoService';
-import type { PapelUsuario, VinculoUsuarioOrganizacaoResponseDTO } from '../../types/auth';
+import type { VinculoUsuarioOrganizacaoResponseDTO } from '../../types/auth';
 import type { CategoriaResponseDTO } from '../../types/categoria';
 import type { OrganizacaoResponseDTO } from '../../types/organizacao';
 
-const papeisSecretaria: Array<{ value: PapelUsuario; label: string }> = [
-  { value: 'ADMIN_SECRETARIA', label: 'Admin da secretaria' },
-  { value: 'ATENDENTE_SECRETARIA', label: 'Atendente da secretaria' },
-];
-
-function papelLabel(papel: PapelUsuario) {
-  if (papel === 'ADMIN_PREFEITURA') return 'Admin prefeitura';
-  if (papel === 'ADMIN_SECRETARIA') return 'Admin secretaria';
-  return 'Atendente secretaria';
+function papelLabel(vinculo: VinculoUsuarioOrganizacaoResponseDTO, organizacao?: OrganizacaoResponseDTO | null) {
+  if (vinculo.papel === 'PREFEITURA') return 'Prefeitura';
+  if (organizacao?.tipo === 'SECRETARIA') return 'Usuario da secretaria';
+  return 'Secretaria';
 }
 
 export function AdministracaoPage() {
   const { vinculosOperacionais } = useUser();
   const prefeituraId = vinculosOperacionais.find(
-    (vinculo) => vinculo.ativo && vinculo.papel === 'ADMIN_PREFEITURA',
+    (vinculo) => vinculo.ativo && vinculo.papel === 'PREFEITURA',
   )?.organizacaoId;
 
   const [prefeitura, setPrefeitura] = useState<OrganizacaoResponseDTO | null>(null);
@@ -64,7 +59,6 @@ export function AdministracaoPage() {
   const [categoriasSecretaria, setCategoriasSecretaria] = useState<Set<number>>(new Set());
 
   const [organizacaoUsuarioId, setOrganizacaoUsuarioId] = useState('');
-  const [papelUsuario, setPapelUsuario] = useState<PapelUsuario>('ATENDENTE_SECRETARIA');
   const [nomeUsuario, setNomeUsuario] = useState('');
   const [emailUsuario, setEmailUsuario] = useState('');
   const [usernameUsuario, setUsernameUsuario] = useState('');
@@ -258,7 +252,6 @@ export function AdministracaoPage() {
         username: usernameUsuario.trim(),
         senha: senhaUsuario,
         telefone: telefoneUsuario.trim() || null,
-        papel: papelUsuario,
       });
 
       setNomeUsuario('');
@@ -266,7 +259,6 @@ export function AdministracaoPage() {
       setUsernameUsuario('');
       setSenhaUsuario('');
       setTelefoneUsuario('');
-      setPapelUsuario('ATENDENTE_SECRETARIA');
       setFeedback('Operador criado e vinculado a secretaria.');
       await carregarDados();
     } catch (error) {
@@ -282,7 +274,6 @@ export function AdministracaoPage() {
 
     try {
       await vinculoService.atualizar(vinculo.id, {
-        papel: vinculo.papel,
         ativo: !vinculo.ativo,
       });
       setFeedback(vinculo.ativo ? 'Vinculo desativado.' : 'Vinculo ativado.');
@@ -423,19 +414,6 @@ export function AdministracaoPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label className="mb-2 block">Papel</Label>
-                <Select value={papelUsuario} onValueChange={(value) => setPapelUsuario(value as PapelUsuario)}>
-                  <SelectTrigger className="border-border bg-background/80 shadow-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {papeisSecretaria.map((papel) => (
-                      <SelectItem key={papel.value} value={papel.value}>{papel.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Input value={nomeUsuario} onChange={(event) => setNomeUsuario(event.target.value)} placeholder="Nome completo" className="border-border bg-background/80 shadow-sm" />
@@ -556,7 +534,7 @@ export function AdministracaoPage() {
                     <div key={vinculo.id} className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
                       <div>
                         <p className="font-medium text-foreground">{vinculo.nomeUsuario}</p>
-                        <p className="text-sm text-muted-foreground">{papelLabel(vinculo.papel)}</p>
+                        <p className="text-sm text-muted-foreground">{papelLabel(vinculo, organizacao)}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Badge className={vinculo.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}>

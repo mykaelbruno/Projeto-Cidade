@@ -230,7 +230,7 @@ public class OrganizacaoService {
 	public VinculoUsuarioOrganizacao criarUsuarioInstitucional(Long organizacaoId, UsuarioInstitucionalCreateRequestDTO request) {
 		Organizacao organizacao = organizacaoRepository.findById(organizacaoId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organizacao nao encontrada."));
-		validarPapelPermitidoNaOrganizacao(organizacao, request.papel());
+		PapelUsuario papel = resolverPapelInstitucional(organizacao);
 		validarEmailEUsernameDisponiveis(request.email(), request.username());
 
 		Usuario usuario = new Usuario();
@@ -248,14 +248,14 @@ public class OrganizacaoService {
 		VinculoUsuarioOrganizacao vinculo = new VinculoUsuarioOrganizacao();
 		vinculo.setUsuario(usuarioSalvo);
 		vinculo.setOrganizacao(organizacao);
-		vinculo.setPapel(request.papel());
+		vinculo.setPapel(papel);
 		VinculoUsuarioOrganizacao salvo = vinculoRepository.save(vinculo);
 		auditoriaService.registrar(
 				TipoAcaoAuditoria.USUARIO_INSTITUCIONAL_CRIADO,
 				TipoAlvoAuditoria.VINCULO,
 				salvo.getId(),
 				"Usuario institucional criado e vinculado.",
-				"Usuario id: " + usuarioSalvo.getId() + ", organizacao id: " + organizacao.getId() + ", papel: " + request.papel()
+				"Usuario id: " + usuarioSalvo.getId() + ", organizacao id: " + organizacao.getId() + ", papel: " + papel
 		);
 		return salvo;
 	}
@@ -274,15 +274,14 @@ public class OrganizacaoService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organizacao nao encontrada."));
 	}
 
-	private void validarPapelPermitidoNaOrganizacao(Organizacao organizacao, PapelUsuario papel) {
-		if (organizacao.getTipo() == TipoOrganizacao.PREFEITURA && papel != PapelUsuario.ADMIN_PREFEITURA) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Prefeitura aceita apenas ADMIN_PREFEITURA.");
+	private PapelUsuario resolverPapelInstitucional(Organizacao organizacao) {
+		if (organizacao.getTipo() == TipoOrganizacao.PREFEITURA) {
+			return PapelUsuario.PREFEITURA;
 		}
-		if (organizacao.getTipo() == TipoOrganizacao.SECRETARIA
-				&& papel != PapelUsuario.ADMIN_SECRETARIA
-				&& papel != PapelUsuario.ATENDENTE_SECRETARIA) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Secretaria aceita apenas ADMIN_SECRETARIA ou ATENDENTE_SECRETARIA.");
+		if (organizacao.getTipo() == TipoOrganizacao.SECRETARIA) {
+			return PapelUsuario.SECRETARIA;
 		}
+		throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de organizacao nao suporta vinculo institucional.");
 	}
 
 	private void validarEmailEUsernameDisponiveis(String email, String username) {

@@ -44,7 +44,7 @@ class AuditoriaServiceTest {
 		SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
 				jwt("15"),
 				null,
-				List.of(new SimpleGrantedAuthority("ROLE_ADMIN_APP"))
+				List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
 		));
 		AuditoriaContext.definir(new AuditoriaContext.DadosRequisicao(
 				"PATCH",
@@ -68,7 +68,7 @@ class AuditoriaServiceTest {
 		assertThat(auditoria.getAlvoTipo()).isEqualTo(TipoAlvoAuditoria.DENUNCIA);
 		assertThat(auditoria.getAlvoId()).isEqualTo(10L);
 		assertThat(auditoria.getAtorId()).isEqualTo(15L);
-		assertThat(auditoria.getPerfilAtor()).isEqualTo("ADMIN_APP");
+		assertThat(auditoria.getPerfilAtor()).isEqualTo("ADMIN");
 		assertThat(auditoria.getMetodoHttp()).isEqualTo("PATCH");
 		assertThat(auditoria.getCaminho()).isEqualTo("/api/denuncias/10/status");
 		assertThat(auditoria.getIp()).isEqualTo("127.0.0.1");

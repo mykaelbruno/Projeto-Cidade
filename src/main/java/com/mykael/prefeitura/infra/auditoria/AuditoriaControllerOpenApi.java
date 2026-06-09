@@ -22,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 						examples = @ExampleObject(value = OpenApiExemplos.ERRO_VALIDACAO))),
 		@ApiResponse(responseCode = "401", description = "Usuario nao autenticado.",
 				content = @Content(schema = @Schema(implementation = ErroApiResponse.class))),
-		@ApiResponse(responseCode = "403", description = "Acesso restrito ao ADMIN_APP.",
+		@ApiResponse(responseCode = "403", description = "Acesso restrito ao ADMIN.",
 				content = @Content(schema = @Schema(implementation = ErroApiResponse.class))),
 		@ApiResponse(responseCode = "429", description = "Limite de requisicoes excedido.",
 				content = @Content(schema = @Schema(implementation = ErroApiResponse.class)))
@@ -34,7 +34,7 @@ public interface AuditoriaControllerOpenApi {
 			description = """
 					Retorna acoes sensiveis registradas pelo sistema, como alteracoes de status,
 					moderacao, transferencias, gestao de usuarios, organizacoes, categorias e vinculos.
-					Acesso restrito ao ADMIN_APP.
+					Acesso restrito ao ADMIN.
 			"""
 	)
 	@ApiResponse(responseCode = "200", description = "Registros de auditoria retornados com sucesso.")

@@ -65,22 +65,22 @@ public class VinculoUsuarioOrganizacaoService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario nao encontrado."));
 		Organizacao organizacao = organizacaoRepository.findById(request.organizacaoId())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organizacao nao encontrada."));
+		PapelUsuario papel = resolverPapelInstitucional(organizacao);
 
 		validarUsuarioPodeReceberVinculo(usuario);
 		validarOrganizacaoAtiva(organizacao);
-		validarPapelPermitidoNaOrganizacao(organizacao, request.papel());
 
 		if (!vinculoRepository.findByUsuarioIdAndAtivoTrue(usuario.getId()).isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "Usuario ja possui vinculo institucional ativo.");
 		}
-		if (vinculoRepository.existsByUsuarioIdAndOrganizacaoIdAndPapel(usuario.getId(), organizacao.getId(), request.papel())) {
+		if (vinculoRepository.existsByUsuarioIdAndOrganizacaoIdAndPapel(usuario.getId(), organizacao.getId(), papel)) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "Usuario ja possui vinculo com esta organizacao e papel.");
 		}
 
 		VinculoUsuarioOrganizacao vinculo = new VinculoUsuarioOrganizacao();
 		vinculo.setUsuario(usuario);
 		vinculo.setOrganizacao(organizacao);
-		vinculo.setPapel(request.papel());
+		vinculo.setPapel(papel);
 		vinculo.setAtivo(request.ativo() == null || request.ativo());
 
 		VinculoUsuarioOrganizacao salvo = vinculoRepository.save(vinculo);
@@ -91,7 +91,7 @@ public class VinculoUsuarioOrganizacaoService {
 				"Vinculo institucional criado para usuario existente.",
 				"Usuario id: " + usuario.getId()
 						+ ", organizacao id: " + organizacao.getId()
-						+ ", papel: " + request.papel()
+						+ ", papel: " + papel
 		);
 		return salvo;
 	}
@@ -99,8 +99,6 @@ public class VinculoUsuarioOrganizacaoService {
 	@Transactional
 	public VinculoUsuarioOrganizacao atualizar(Long vinculoId, VinculoUsuarioOrganizacaoUpdateRequestDTO request) {
 		VinculoUsuarioOrganizacao vinculo = buscar(vinculoId);
-		validarPapelPermitidoNaOrganizacao(vinculo.getOrganizacao(), request.papel());
-		vinculo.setPapel(request.papel());
 		vinculo.setAtivo(request.ativo());
 		auditoriaService.registrar(
 				TipoAcaoAuditoria.VINCULO_ATUALIZADO,
@@ -109,7 +107,7 @@ public class VinculoUsuarioOrganizacaoService {
 				"Vinculo institucional atualizado.",
 				"Usuario id: " + vinculo.getUsuario().getId()
 						+ ", organizacao id: " + vinculo.getOrganizacao().getId()
-						+ ", papel: " + request.papel()
+						+ ", papel: " + vinculo.getPapel()
 						+ ", ativo: " + request.ativo()
 		);
 		return vinculo;
@@ -146,15 +144,14 @@ public class VinculoUsuarioOrganizacaoService {
 		return vinculo;
 	}
 
-	private void validarPapelPermitidoNaOrganizacao(Organizacao organizacao, PapelUsuario papel) {
-		if (organizacao.getTipo() == TipoOrganizacao.PREFEITURA && papel != PapelUsuario.ADMIN_PREFEITURA) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Prefeitura aceita apenas ADMIN_PREFEITURA.");
+	private PapelUsuario resolverPapelInstitucional(Organizacao organizacao) {
+		if (organizacao.getTipo() == TipoOrganizacao.PREFEITURA) {
+			return PapelUsuario.PREFEITURA;
 		}
-		if (organizacao.getTipo() == TipoOrganizacao.SECRETARIA
-				&& papel != PapelUsuario.ADMIN_SECRETARIA
-				&& papel != PapelUsuario.ATENDENTE_SECRETARIA) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Secretaria aceita apenas ADMIN_SECRETARIA ou ATENDENTE_SECRETARIA.");
+		if (organizacao.getTipo() == TipoOrganizacao.SECRETARIA) {
+			return PapelUsuario.SECRETARIA;
 		}
+		throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de organizacao nao suporta vinculo institucional.");
 	}
 
 	private void validarOrganizacaoAtiva(Organizacao organizacao) {
@@ -193,6 +190,8 @@ public class VinculoUsuarioOrganizacaoService {
 				|| !origem.getOrganizacaoPai().getId().equals(destino.getOrganizacaoPai().getId())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transferencia permitida apenas entre secretarias da mesma prefeitura.");
 		}
-		validarPapelPermitidoNaOrganizacao(destino, vinculo.getPapel());
+		if (resolverPapelInstitucional(destino) != vinculo.getPapel()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Destino informado nao suporta o papel atual do vinculo.");
+		}
 	}
 }

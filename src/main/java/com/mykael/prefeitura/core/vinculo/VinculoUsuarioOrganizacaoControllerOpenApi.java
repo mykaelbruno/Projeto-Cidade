@@ -36,7 +36,7 @@ public interface VinculoUsuarioOrganizacaoControllerOpenApi {
 	@ApiResponse(responseCode = "200", description = "Vinculos retornados.")
 	List<VinculoUsuarioOrganizacaoResponseDTO> listar();
 
-	@Operation(summary = "Cria vinculo para usuario existente", description = "Permite que ADMIN_APP ou ADMIN_PREFEITURA vincule um usuario MORADOR ativo a uma organizacao ativa. O usuario nao pode possuir outro vinculo institucional ativo.")
+	@Operation(summary = "Cria vinculo para usuario existente", description = "Permite que ADMIN ou PREFEITURA vincule um usuario MORADOR ativo a uma organizacao ativa. O usuario nao pode possuir outro vinculo institucional ativo.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "201", description = "Vinculo criado.")
 	ResponseEntity<VinculoUsuarioOrganizacaoResponseDTO> criar(
@@ -65,7 +65,7 @@ public interface VinculoUsuarioOrganizacaoControllerOpenApi {
 			Jwt jwt
 	);
 
-	@Operation(summary = "Transfere vinculo para outra secretaria", description = "Permite que ADMIN_APP ou ADMIN_PREFEITURA mova o vinculo institucional existente de uma secretaria para outra secretaria da mesma prefeitura, sem criar novo login.")
+	@Operation(summary = "Transfere vinculo para outra secretaria", description = "Permite que ADMIN ou PREFEITURA mova o vinculo institucional existente de uma secretaria para outra secretaria da mesma prefeitura, sem criar novo login.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Vinculo transferido para a secretaria de destino.")
 	ResponseEntity<VinculoUsuarioOrganizacaoResponseDTO> transferirSecretaria(
@@ -78,6 +78,6 @@ public interface VinculoUsuarioOrganizacaoControllerOpenApi {
 
 	@Operation(summary = "Lista meus vinculos", description = "Retorna os vinculos ativos do usuario logado.")
 	@SecurityRequirement(name = "cookieAuth")
-	@ApiResponse(responseCode = "200", description = "Vínculos do usuário retornados com sucesso.")
+	@ApiResponse(responseCode = "200", description = "VÃ­nculos do usuÃ¡rio retornados com sucesso.")
 	List<VinculoUsuarioOrganizacaoResponseDTO> listarMeusVinculos(Jwt jwt);
 }

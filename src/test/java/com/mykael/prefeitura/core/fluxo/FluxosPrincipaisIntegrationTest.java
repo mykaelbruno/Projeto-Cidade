@@ -52,6 +52,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.transaction.annotation.Transactional
 class FluxosPrincipaisIntegrationTest {
 
 	private static final AtomicInteger SEQUENCIA = new AtomicInteger();
@@ -126,7 +127,7 @@ class FluxosPrincipaisIntegrationTest {
 		Organizacao prefeitura = prefeitura();
 		Bairro bairro = bairro(prefeitura, "Centro");
 		Organizacao secretaria = secretaria(prefeitura);
-		vinculo(adminSecretaria, secretaria, PapelUsuario.ADMIN_SECRETARIA);
+		vinculo(adminSecretaria, secretaria, PapelUsuario.SECRETARIA);
 		Categoria categoria = categoria(secretaria);
 
 		Long denunciaId = criarDenunciaViaApi(morador, categoria, prefeitura, bairro);
@@ -143,7 +144,7 @@ class FluxosPrincipaisIntegrationTest {
 				.andExpect(jsonPath("$.oficial").value(false));
 
 		mockMvc.perform(post("/api/denuncias/{denunciaId}/respostas-oficiais", denunciaId)
-						.with(jwtUsuario(adminSecretaria, "MORADOR", "ADMIN_SECRETARIA"))
+						.with(jwtUsuario(adminSecretaria, "MORADOR", "SECRETARIA"))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -168,12 +169,12 @@ class FluxosPrincipaisIntegrationTest {
 		Organizacao prefeitura = prefeitura();
 		Organizacao origem = secretaria(prefeitura);
 		Organizacao destino = secretaria(prefeitura);
-		vinculo(adminSecretaria, origem, PapelUsuario.ADMIN_SECRETARIA);
-		vinculo(adminPrefeitura, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+		vinculo(adminSecretaria, origem, PapelUsuario.SECRETARIA);
+		vinculo(adminPrefeitura, prefeitura, PapelUsuario.PREFEITURA);
 		Denuncia denuncia = denunciaComResponsavel(origem);
 
 		MvcResult solicitacaoResult = mockMvc.perform(post("/api/operacional/denuncias/{denunciaId}/solicitacoes-transferencia", denuncia.getId())
-						.with(jwtUsuario(adminSecretaria, "MORADOR", "ADMIN_SECRETARIA"))
+						.with(jwtUsuario(adminSecretaria, "MORADOR", "SECRETARIA"))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -188,7 +189,7 @@ class FluxosPrincipaisIntegrationTest {
 		Long solicitacaoId = idDaResposta(solicitacaoResult);
 
 		mockMvc.perform(post("/api/operacional/solicitacoes-transferencia/{solicitacaoId}/aprovacao", solicitacaoId)
-						.with(jwtUsuario(adminPrefeitura, "MORADOR", "ADMIN_PREFEITURA"))
+						.with(jwtUsuario(adminPrefeitura, "MORADOR", "PREFEITURA"))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -307,7 +308,7 @@ class FluxosPrincipaisIntegrationTest {
 	@Test
 	void moderadorNaoDeveSuspenderContaAdministrativa() throws Exception {
 		Usuario moderador = usuario(PerfilUsuario.MODERADOR);
-		Usuario adminApp = usuario(PerfilUsuario.ADMIN_APP);
+		Usuario adminApp = usuario(PerfilUsuario.ADMIN);
 
 		mockMvc.perform(post("/api/moderacoes/usuarios/{usuarioId}/suspensao", adminApp.getId())
 						.with(jwtUsuario(moderador, "MODERADOR"))
@@ -327,7 +328,7 @@ class FluxosPrincipaisIntegrationTest {
 		Usuario adminPrefeitura = usuario(PerfilUsuario.MORADOR);
 		Organizacao prefeitura = prefeitura();
 		Organizacao secretaria = secretaria(prefeitura);
-		vinculo(adminPrefeitura, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+		vinculo(adminPrefeitura, prefeitura, PapelUsuario.PREFEITURA);
 		Categoria infraestrutura = categoria(secretaria);
 		Categoria iluminacao = categoria(secretaria);
 
@@ -351,7 +352,7 @@ class FluxosPrincipaisIntegrationTest {
 		denunciaRepository.save(aberta);
 
 		mockMvc.perform(get("/api/paineis/operacional/organizacoes/{organizacaoId}/resumo", prefeitura.getId())
-						.with(jwtUsuario(adminPrefeitura, "MORADOR", "ADMIN_PREFEITURA")))
+						.with(jwtUsuario(adminPrefeitura, "MORADOR", "PREFEITURA")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.denuncias.total").value(3))
 				.andExpect(jsonPath("$.indicadores.taxaConclusaoConfirmada").value(33.33))
@@ -367,7 +368,7 @@ class FluxosPrincipaisIntegrationTest {
 		Usuario adminSecretaria = usuario(PerfilUsuario.MORADOR);
 		Organizacao prefeitura = prefeitura();
 		Organizacao secretaria = secretaria(prefeitura);
-		vinculo(adminSecretaria, secretaria, PapelUsuario.ADMIN_SECRETARIA);
+		vinculo(adminSecretaria, secretaria, PapelUsuario.SECRETARIA);
 		Categoria categoria = categoria(secretaria);
 
 		Denuncia concluidaConfirmada = denunciaComResponsavel(secretaria);
@@ -384,7 +385,7 @@ class FluxosPrincipaisIntegrationTest {
 		denunciaRepository.save(emAnalise);
 
 		mockMvc.perform(get("/api/paineis/operacional/organizacoes/{organizacaoId}/resumo", secretaria.getId())
-						.with(jwtUsuario(adminSecretaria, "MORADOR", "ADMIN_SECRETARIA")))
+						.with(jwtUsuario(adminSecretaria, "MORADOR", "SECRETARIA")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.organizacaoId").value(secretaria.getId()))
 				.andExpect(jsonPath("$.tipoOrganizacao").value(TipoOrganizacao.SECRETARIA.name()))
@@ -402,7 +403,7 @@ class FluxosPrincipaisIntegrationTest {
 		Organizacao prefeitura = prefeitura();
 		Organizacao secretariaInfra = secretaria(prefeitura);
 		Organizacao secretariaSaude = secretaria(prefeitura);
-		vinculo(adminPrefeitura, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+		vinculo(adminPrefeitura, prefeitura, PapelUsuario.PREFEITURA);
 
 		Denuncia denunciaInfra = denunciaComResponsavel(secretariaInfra);
 		denunciaInfra.setTitulo("Relato da infraestrutura");
@@ -414,7 +415,7 @@ class FluxosPrincipaisIntegrationTest {
 
 		mockMvc.perform(get("/api/operacional/organizacoes/{organizacaoId}/denuncias", prefeitura.getId())
 						.param("organizacaoResponsavelId", String.valueOf(secretariaInfra.getId()))
-						.with(jwtUsuario(adminPrefeitura, "MORADOR", "ADMIN_PREFEITURA")))
+						.with(jwtUsuario(adminPrefeitura, "MORADOR", "PREFEITURA")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.content", hasSize(1)))
 				.andExpect(jsonPath("$.content[0].id").value(denunciaInfra.getId()))
@@ -427,7 +428,7 @@ class FluxosPrincipaisIntegrationTest {
 		Usuario adminPrefeitura = usuario(PerfilUsuario.MORADOR);
 		Organizacao prefeitura = prefeitura();
 		Organizacao secretaria = secretaria(prefeitura);
-		vinculo(adminPrefeitura, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+		vinculo(adminPrefeitura, prefeitura, PapelUsuario.PREFEITURA);
 		Categoria categoria = categoria(secretaria);
 
 		Denuncia exportada = denunciaComResponsavel(secretaria);
@@ -446,7 +447,7 @@ class FluxosPrincipaisIntegrationTest {
 
 		MvcResult result = mockMvc.perform(get("/api/relatorios/operacional/organizacoes/{organizacaoId}/denuncias.csv", prefeitura.getId())
 						.param("bairro", "Bairro Relatorio")
-						.with(jwtUsuario(adminPrefeitura, "MORADOR", "ADMIN_PREFEITURA")))
+						.with(jwtUsuario(adminPrefeitura, "MORADOR", "PREFEITURA")))
 				.andExpect(status().isOk())
 				.andReturn();
 

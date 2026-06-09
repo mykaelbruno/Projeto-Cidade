@@ -44,7 +44,7 @@ public class ComentarioController implements ComentarioControllerOpenApi {
 
 	@Override
 	@PostMapping("/respostas-oficiais")
-	@PreAuthorize("hasAnyRole('ADMIN_PREFEITURA', 'ADMIN_SECRETARIA', 'ATENDENTE_SECRETARIA', 'ADMIN_APP')")
+	@PreAuthorize("hasAnyRole('PREFEITURA', 'SECRETARIA', 'ADMIN')")
 	public ResponseEntity<ComentarioResponseDTO> responderOficialmente(
 			@PathVariable Long denunciaId,
 			@Valid @RequestBody RespostaOficialCreateRequestDTO request,

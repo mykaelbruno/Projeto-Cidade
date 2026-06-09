@@ -37,7 +37,7 @@ public class OperacionalDenunciaController implements OperacionalDenunciaControl
 
 	@Override
 	@GetMapping("/organizacoes/{organizacaoId}/denuncias")
-	@PreAuthorize("hasAnyRole('ADMIN_PREFEITURA', 'ADMIN_SECRETARIA', 'ATENDENTE_SECRETARIA', 'ADMIN_APP')")
+	@PreAuthorize("hasAnyRole('PREFEITURA', 'SECRETARIA', 'ADMIN')")
 	public Page<DenunciaResponseDTO> listarDenunciasDaOrganizacao(
 			@PathVariable Long organizacaoId,
 			@RequestParam(required = false) String cidade,
@@ -64,7 +64,7 @@ public class OperacionalDenunciaController implements OperacionalDenunciaControl
 
 	@Override
 	@PostMapping("/denuncias/{denunciaId}/solicitacoes-transferencia")
-	@PreAuthorize("hasAnyRole('ADMIN_SECRETARIA', 'ATENDENTE_SECRETARIA')")
+	@PreAuthorize("hasRole('SECRETARIA')")
 	public ResponseEntity<SolicitacaoTransferenciaResponseDTO> solicitarTransferencia(
 			@PathVariable Long denunciaId,
 			@Valid @RequestBody SolicitacaoTransferenciaCreateRequestDTO request,
@@ -80,7 +80,7 @@ public class OperacionalDenunciaController implements OperacionalDenunciaControl
 
 	@Override
 	@GetMapping("/prefeituras/{prefeituraId}/solicitacoes-transferencia")
-	@PreAuthorize("hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('PREFEITURA')")
 	public Page<SolicitacaoTransferenciaResponseDTO> listarSolicitacoesDaPrefeitura(
 			@PathVariable Long prefeituraId,
 			@RequestParam(required = false) StatusSolicitacaoTransferencia status,
@@ -97,7 +97,7 @@ public class OperacionalDenunciaController implements OperacionalDenunciaControl
 
 	@Override
 	@PostMapping("/solicitacoes-transferencia/{solicitacaoId}/aprovacao")
-	@PreAuthorize("hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('PREFEITURA')")
 	public ResponseEntity<SolicitacaoTransferenciaResponseDTO> aprovarTransferencia(
 			@PathVariable Long solicitacaoId,
 			@Valid @RequestBody SolicitacaoTransferenciaAprovacaoRequestDTO request,
@@ -112,7 +112,7 @@ public class OperacionalDenunciaController implements OperacionalDenunciaControl
 
 	@Override
 	@PostMapping("/solicitacoes-transferencia/{solicitacaoId}/recusa")
-	@PreAuthorize("hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('PREFEITURA')")
 	public ResponseEntity<SolicitacaoTransferenciaResponseDTO> recusarTransferencia(
 			@PathVariable Long solicitacaoId,
 			@Valid @RequestBody SolicitacaoTransferenciaRecusaRequestDTO request,
@@ -127,7 +127,7 @@ public class OperacionalDenunciaController implements OperacionalDenunciaControl
 
 	@Override
 	@PatchMapping("/denuncias/{denunciaId}/responsavel")
-	@PreAuthorize("hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('PREFEITURA')")
 	public ResponseEntity<DenunciaResponseDTO> alterarResponsavelPelaPrefeitura(
 			@PathVariable Long denunciaId,
 			@Valid @RequestBody AlterarResponsavelDenunciaRequestDTO request,

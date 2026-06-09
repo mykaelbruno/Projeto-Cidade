@@ -38,14 +38,14 @@ public class CategoriaController implements CategoriaControllerOpenApi {
 
 	@Override
 	@PostMapping
-	@PreAuthorize("hasRole('ADMIN_APP')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<CategoriaResponseDTO> criar(@Valid @RequestBody CategoriaCreateRequestDTO request) {
 		return ResponseEntity.status(201).body(CategoriaResponseDTO.from(categoriaService.criar(request)));
 	}
 
 	@Override
 	@PutMapping("/{categoriaId}")
-	@PreAuthorize("hasRole('ADMIN_APP')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<CategoriaResponseDTO> atualizar(
 			@PathVariable Long categoriaId,
 			@Valid @RequestBody CategoriaUpdateRequestDTO request
@@ -55,7 +55,7 @@ public class CategoriaController implements CategoriaControllerOpenApi {
 
 	@Override
 	@PatchMapping("/{categoriaId}/ativacao")
-	@PreAuthorize("hasRole('ADMIN_APP')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<CategoriaResponseDTO> alterarAtiva(
 			@PathVariable Long categoriaId,
 			@RequestBody AtivacaoRequestDTO request

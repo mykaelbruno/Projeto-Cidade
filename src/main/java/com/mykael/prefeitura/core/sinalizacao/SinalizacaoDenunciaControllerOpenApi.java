@@ -55,7 +55,7 @@ public interface SinalizacaoDenunciaControllerOpenApi {
 			Jwt jwt
 	);
 
-	@Operation(summary = "Lista sinalizacoes para moderacao", description = "Retorna reports de denuncia para ADMIN_APP e MODERADOR. Por padrao lista apenas pendentes.")
+	@Operation(summary = "Lista sinalizacoes para moderacao", description = "Retorna reports de denuncia para ADMIN e MODERADOR. Por padrao lista apenas pendentes.")
 	@SecurityRequirement(name = "cookieAuth")
 	@ApiResponse(responseCode = "200", description = "Sinalizacoes retornadas.")
 	Page<SinalizacaoDenunciaResponseDTO> listarParaModeracao(

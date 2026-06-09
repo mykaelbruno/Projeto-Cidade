@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.transaction.annotation.Transactional
 class ContaIntegrationTest {
 
 	private static final AtomicInteger SEQUENCIA = new AtomicInteger();

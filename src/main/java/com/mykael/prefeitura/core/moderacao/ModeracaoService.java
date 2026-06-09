@@ -77,8 +77,8 @@ public class ModeracaoService {
 				denuncia.getAutor(),
 				denuncia,
 				TipoNotificacao.MODERACAO_DENUNCIA_ARQUIVADA,
-				"Relato Arquivado pela Moderação",
-				"O seu relato \"" + denuncia.getTitulo() + "\" foi arquivado pela moderação. Motivo: " + request.motivo(),
+				"Relato Arquivado pela ModeraÃ§Ã£o",
+				"O seu relato \"" + denuncia.getTitulo() + "\" foi arquivado pela moderaÃ§Ã£o. Motivo: " + request.motivo(),
 				"/denuncias/" + denuncia.getId()
 		);
 
@@ -123,8 +123,8 @@ public class ModeracaoService {
 				comentario.getAutor(),
 				comentario.getDenuncia(),
 				TipoNotificacao.MODERACAO_COMENTARIO_REMOVIDO,
-				"Comentário Removido pela Moderação",
-				"Um comentário seu na denúncia \"" + comentario.getDenuncia().getTitulo() + "\" foi removido por violar as diretrizes. Motivo: " + request.motivo(),
+				"ComentÃ¡rio Removido pela ModeraÃ§Ã£o",
+				"Um comentÃ¡rio seu na denÃºncia \"" + comentario.getDenuncia().getTitulo() + "\" foi removido por violar as diretrizes. Motivo: " + request.motivo(),
 				"/denuncias/" + comentario.getDenuncia().getId()
 		);
 
@@ -155,8 +155,8 @@ public class ModeracaoService {
 				usuario,
 				null,
 				TipoNotificacao.MODERACAO_USUARIO_ADVERTIDO,
-				"Notificação de Advertência",
-				"A sua conta recebeu uma advertência formal da moderação por comportamento inadequado. Motivo: " + request.motivo(),
+				"NotificaÃ§Ã£o de AdvertÃªncia",
+				"A sua conta recebeu uma advertÃªncia formal da moderaÃ§Ã£o por comportamento inadequado. Motivo: " + request.motivo(),
 				null
 		);
 
@@ -193,7 +193,7 @@ public class ModeracaoService {
 				null,
 				TipoNotificacao.MODERACAO_USUARIO_SUSPENSO,
 				"Sua Conta foi Suspensa",
-				"A sua conta foi suspensa temporariamente por infração às diretrizes do Cidade Ativa. Motivo: " + request.motivo(),
+				"A sua conta foi suspensa temporariamente por infraÃ§Ã£o Ã s diretrizes do Cidade Ativa. Motivo: " + request.motivo(),
 				null
 		);
 
@@ -283,14 +283,14 @@ public class ModeracaoService {
 		if (moderador.getId().equals(usuario.getId())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Usuario nao pode moderar a propria conta.");
 		}
-		if (moderador.getPerfilGlobal() != PerfilUsuario.ADMIN_APP
+		if (moderador.getPerfilGlobal() != PerfilUsuario.ADMIN
 				&& usuario.getPerfilGlobal() != PerfilUsuario.MORADOR) {
-			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Apenas ADMIN_APP pode moderar contas administrativas ou moderadores.");
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Apenas ADMIN pode moderar contas administrativas ou moderadores.");
 		}
-		if (suspensao && usuario.getPerfilGlobal() == PerfilUsuario.ADMIN_APP) {
-			long adminsAtivos = usuarioRepository.countByPerfilGlobalAndAtivoTrue(PerfilUsuario.ADMIN_APP);
+		if (suspensao && usuario.getPerfilGlobal() == PerfilUsuario.ADMIN) {
+			long adminsAtivos = usuarioRepository.countByPerfilGlobalAndAtivoTrue(PerfilUsuario.ADMIN);
 			if (adminsAtivos <= 1) {
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nao e permitido suspender o ultimo ADMIN_APP ativo.");
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nao e permitido suspender o ultimo ADMIN ativo.");
 			}
 		}
 	}

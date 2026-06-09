@@ -181,7 +181,7 @@ public class DenunciaService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organizacao ativa nao encontrada."));
 
 		boolean usuarioRepresentaOrganizacao = false;
-		if (usuario.getPerfilGlobal() == PerfilUsuario.ADMIN_APP) {
+		if (usuario.getPerfilGlobal() == PerfilUsuario.ADMIN) {
 			usuarioRepresentaOrganizacao = true;
 		} else {
 			boolean vinculoDireto = vinculoRepository
@@ -191,7 +191,7 @@ public class DenunciaService {
 			} else {
 				List<VinculoUsuarioOrganizacao> vinculos = vinculoRepository.findByUsuarioIdAndAtivoTrue(usuarioId);
 				for (VinculoUsuarioOrganizacao v : vinculos) {
-					if (v.getPapel() == PapelUsuario.ADMIN_PREFEITURA) {
+					if (v.getPapel() == PapelUsuario.PREFEITURA) {
 						Long prefeituraId = v.getOrganizacao().getId();
 						if (organizacao.getOrganizacaoPai() != null && organizacao.getOrganizacaoPai().getId().equals(prefeituraId)) {
 							usuarioRepresentaOrganizacao = true;
@@ -405,14 +405,14 @@ public class DenunciaService {
 			return;
 		}
 
-		if (usuario.getPerfilGlobal() == PerfilUsuario.ADMIN_APP) {
+		if (usuario.getPerfilGlobal() == PerfilUsuario.ADMIN) {
 			return;
 		}
 
 		boolean possuiPermissao = false;
 		List<VinculoUsuarioOrganizacao> vinculos = vinculoRepository.findByUsuarioIdAndAtivoTrue(usuario.getId());
 		for (VinculoUsuarioOrganizacao v : vinculos) {
-			if (v.getPapel() == PapelUsuario.ADMIN_PREFEITURA) {
+			if (v.getPapel() == PapelUsuario.PREFEITURA) {
 				Long prefeituraId = v.getOrganizacao().getId();
 				Organizacao respAtual = denuncia.getOrganizacaoResponsavel();
 				boolean eSubordinada = respAtual.getOrganizacaoPai() != null && respAtual.getOrganizacaoPai().getId().equals(prefeituraId);

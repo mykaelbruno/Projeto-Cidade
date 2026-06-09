@@ -289,7 +289,7 @@ export function ModeracaoPage() {
             <h3 className="font-display font-semibold text-foreground">Moderacao de usuarios</h3>
             <p className="text-sm text-muted-foreground mt-1">
               Para advertir, suspender, reativar ou consultar historico de usuario por ID, use o painel dedicado de moderador.
-              O Admin App mantem aqui apenas a triagem global de sinalizacoes para evitar duplicar fluxos complexos.
+              O Admin mantem aqui apenas a triagem global de sinalizacoes para evitar duplicar fluxos complexos.
             </p>
           </div>
         </div>

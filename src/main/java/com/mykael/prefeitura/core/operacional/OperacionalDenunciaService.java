@@ -355,13 +355,13 @@ public class OperacionalDenunciaService {
 
 	private void exigirAdminPrefeitura(Long usuarioId, Long prefeituraId) {
 		Usuario usuario = buscarUsuarioAtivo(usuarioId);
-		if (usuario.getPerfilGlobal() == PerfilUsuario.ADMIN_APP) {
+		if (usuario.getPerfilGlobal() == PerfilUsuario.ADMIN) {
 			return;
 		}
 		boolean possuiVinculo = vinculoRepository.existsByUsuarioIdAndOrganizacaoIdAndPapelAndAtivoTrue(
 				usuarioId,
 				prefeituraId,
-				PapelUsuario.ADMIN_PREFEITURA
+				PapelUsuario.PREFEITURA
 		);
 		if (!possuiVinculo) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario nao possui permissao sobre esta prefeitura.");
@@ -370,7 +370,7 @@ public class OperacionalDenunciaService {
 
 	private void exigirVinculoAtivo(Long usuarioId, Long organizacaoId) {
 		Usuario usuario = buscarUsuarioAtivo(usuarioId);
-		if (usuario.getPerfilGlobal() == PerfilUsuario.ADMIN_APP) {
+		if (usuario.getPerfilGlobal() == PerfilUsuario.ADMIN) {
 			return;
 		}
 		if (!vinculoRepository.existsByUsuarioIdAndOrganizacaoIdAndAtivoTrue(usuarioId, organizacaoId)) {

@@ -12,14 +12,12 @@ import {
   Settings,
   Shield,
   Tag,
-  User,
   UserCircle,
   Users,
   X,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { NotificationsList } from '../components/NotificationsList';
-import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { useUser } from '../contexts/UserContext';
 
 const menuItems = [
@@ -35,7 +33,7 @@ const menuItems = [
 export function AdminAppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasUserType, logout, setUserType } = useUser();
+  const { logout } = useUser();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -131,28 +129,14 @@ export function AdminAppLayout() {
               <h1 className="truncate text-base font-display font-bold text-foreground sm:text-lg">
                 Administracao Global
               </h1>
-              <p className="hidden text-xs text-muted-foreground sm:block">Cidade Ativa - Admin App</p>
+              <p className="hidden text-xs text-muted-foreground sm:block">Cidade Ativa - Admin</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <NotificationsList userRole="admin_app" />
+            <NotificationsList userRole="admin" />
 
             <div className="hidden h-6 w-px bg-border sm:block" />
-
-            <button
-              type="button"
-              onClick={() => {
-                if (hasUserType('morador')) {
-                  setUserType('morador');
-                }
-                navigate('/feed');
-              }}
-              className="hidden items-center gap-2 rounded-lg bg-muted px-3 py-1.5 transition-colors hover:bg-muted/80 xl:flex"
-            >
-              <User className="h-4 w-4 text-foreground" />
-              <span className="text-sm font-medium text-foreground">Ver como morador</span>
-            </button>
 
             <div className="relative">
               <button
@@ -175,7 +159,7 @@ export function AdminAppLayout() {
                       <p className="text-sm font-medium text-foreground">
                         Ola, <span className="font-semibold">Admin Global</span>!
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">ADMIN_APP</p>
+                      <p className="mt-1 text-xs text-muted-foreground">ADMIN</p>
                     </div>
                     <div className="py-1">
                       <button
@@ -213,8 +197,6 @@ export function AdminAppLayout() {
           <Outlet />
         </main>
       </div>
-
-      <ProfileSwitcher />
     </div>
   );
 }

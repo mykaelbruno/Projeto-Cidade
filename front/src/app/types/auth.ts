@@ -1,15 +1,14 @@
-export type PerfilUsuario = 'ADMIN_APP' | 'MORADOR' | 'MODERADOR';
+export type PerfilUsuario = 'ADMIN' | 'MORADOR' | 'MODERADOR';
 
 export type PapelUsuario =
-  | 'ADMIN_PREFEITURA'
-  | 'ADMIN_SECRETARIA'
-  | 'ATENDENTE_SECRETARIA';
+  | 'PREFEITURA'
+  | 'SECRETARIA';
 
 export type UserType =
   | 'morador'
   | 'secretaria'
   | 'prefeitura'
-  | 'admin_app'
+  | 'admin'
   | 'moderador';
 
 export interface UsuarioResponseDTO {
@@ -34,6 +33,8 @@ export interface VinculoUsuarioOrganizacaoResponseDTO {
   usuarioId: number;
   organizacaoId: number;
   nomeUsuario: string;
+  emailUsuario: string;
+  telefoneUsuario: string | null;
   nomeOrganizacao: string;
   papel: PapelUsuario;
   ativo: boolean;

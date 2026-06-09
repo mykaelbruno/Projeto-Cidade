@@ -64,7 +64,7 @@ public class SinalizacaoDenunciaController implements SinalizacaoDenunciaControl
 
 	@Override
 	@GetMapping("/api/moderacoes/sinalizacoes-denuncia")
-	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MODERADOR')")
 	public Page<SinalizacaoDenunciaResponseDTO> listarParaModeracao(
 			@RequestParam(required = false) StatusSinalizacaoDenuncia status,
 			@PageableDefault(size = 20, sort = "criadoEm", direction = Sort.Direction.DESC) Pageable pageable
@@ -74,7 +74,7 @@ public class SinalizacaoDenunciaController implements SinalizacaoDenunciaControl
 
 	@Override
 	@PostMapping("/api/moderacoes/sinalizacoes-denuncia/{sinalizacaoId}/analise")
-	@PreAuthorize("hasAnyRole('ADMIN_APP', 'MODERADOR')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'MODERADOR')")
 	public ResponseEntity<SinalizacaoDenunciaResponseDTO> marcarComoAnalisada(
 			@PathVariable Long sinalizacaoId,
 			@AuthenticationPrincipal Jwt jwt

@@ -1,5 +1,3 @@
-import type { PapelUsuario } from './auth';
-
 export type TipoOrganizacao = 'PREFEITURA' | 'SECRETARIA';
 
 export interface OrganizacaoResponseDTO {
@@ -58,5 +56,4 @@ export interface UsuarioInstitucionalCreateRequestDTO {
   username: string;
   senha: string;
   telefone?: string | null;
-  papel: PapelUsuario;
 }

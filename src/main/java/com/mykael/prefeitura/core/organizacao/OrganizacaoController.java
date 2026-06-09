@@ -41,7 +41,7 @@ public class OrganizacaoController implements OrganizacaoControllerOpenApi {
 
 	@Override
 	@GetMapping
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public List<OrganizacaoResponseDTO> listar() {
 		return organizacaoService.listarTodas()
 				.stream()
@@ -61,7 +61,7 @@ public class OrganizacaoController implements OrganizacaoControllerOpenApi {
 
 	@Override
 	@PostMapping("/prefeituras")
-	@PreAuthorize("hasRole('ADMIN_APP')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<OrganizacaoResponseDTO> criarPrefeitura(@Valid @RequestBody PrefeituraCreateRequestDTO request) {
 		var prefeitura = organizacaoService.criarPrefeitura(request);
 		return ResponseEntity.status(201).body(OrganizacaoResponseDTO.from(prefeitura));
@@ -69,7 +69,7 @@ public class OrganizacaoController implements OrganizacaoControllerOpenApi {
 
 	@Override
 	@PostMapping("/prefeituras/{prefeituraId}/secretarias")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<OrganizacaoResponseDTO> criarSecretaria(
 			@PathVariable Long prefeituraId,
 			@Valid @RequestBody SecretariaCreateRequestDTO request,
@@ -82,7 +82,7 @@ public class OrganizacaoController implements OrganizacaoControllerOpenApi {
 
 	@Override
 	@PostMapping("/{organizacaoId}/usuarios-institucionais")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<VinculoUsuarioOrganizacaoResponseDTO> criarUsuarioInstitucional(
 			@PathVariable Long organizacaoId,
 			@Valid @RequestBody UsuarioInstitucionalCreateRequestDTO request,
@@ -95,7 +95,7 @@ public class OrganizacaoController implements OrganizacaoControllerOpenApi {
 
 	@Override
 	@PutMapping("/{organizacaoId}")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<OrganizacaoResponseDTO> atualizar(
 			@PathVariable Long organizacaoId,
 			@Valid @RequestBody OrganizacaoUpdateRequestDTO request,
@@ -107,7 +107,7 @@ public class OrganizacaoController implements OrganizacaoControllerOpenApi {
 
 	@Override
 	@PatchMapping("/{organizacaoId}/categorias")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<OrganizacaoResponseDTO> atualizarCategoriasSecretaria(
 			@PathVariable Long organizacaoId,
 			@Valid @RequestBody SecretariaCategoriasUpdateRequestDTO request,
@@ -119,7 +119,7 @@ public class OrganizacaoController implements OrganizacaoControllerOpenApi {
 
 	@Override
 	@PatchMapping("/{organizacaoId}/ativacao")
-	@PreAuthorize("hasRole('ADMIN_APP') or hasRole('ADMIN_PREFEITURA')")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('PREFEITURA')")
 	public ResponseEntity<OrganizacaoResponseDTO> alterarAtiva(
 			@PathVariable Long organizacaoId,
 			@RequestBody AtivacaoRequestDTO request,
@@ -137,6 +137,6 @@ public class OrganizacaoController implements OrganizacaoControllerOpenApi {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		return authentication != null && authentication.getAuthorities()
 				.stream()
-				.anyMatch(authority -> "ROLE_ADMIN_APP".equals(authority.getAuthority()));
+				.anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
 	}
 }

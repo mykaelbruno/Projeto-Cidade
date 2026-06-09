@@ -40,6 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.transaction.annotation.Transactional
 class PermissaoPorPerfilIntegrationTest {
 
 	private static final AtomicInteger SEQUENCIA = new AtomicInteger();
@@ -116,10 +117,10 @@ class PermissaoPorPerfilIntegrationTest {
 
 	@Test
 	void devePermitirAdminAppConsultarAuditoria() throws Exception {
-		Usuario adminApp = usuario(PerfilUsuario.ADMIN_APP);
+		Usuario adminApp = usuario(PerfilUsuario.ADMIN);
 
 		mockMvc.perform(get("/api/auditorias")
-						.with(jwtUsuario(adminApp, "ADMIN_APP")))
+						.with(jwtUsuario(adminApp, "ADMIN")))
 				.andExpect(status().isOk());
 	}
 
@@ -127,10 +128,10 @@ class PermissaoPorPerfilIntegrationTest {
 	void devePermitirAdminPrefeituraCriarSecretariaDaPropriaPrefeitura() throws Exception {
 		Usuario adminPrefeitura = usuario(PerfilUsuario.MORADOR);
 		Organizacao prefeitura = prefeitura();
-		vinculo(adminPrefeitura, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+		vinculo(adminPrefeitura, prefeitura, PapelUsuario.PREFEITURA);
 
 		mockMvc.perform(post("/api/organizacoes/prefeituras/{prefeituraId}/secretarias", prefeitura.getId())
-						.with(jwtUsuario(adminPrefeitura, "MORADOR", "ADMIN_PREFEITURA"))
+						.with(jwtUsuario(adminPrefeitura, "MORADOR", "PREFEITURA"))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -149,12 +150,12 @@ class PermissaoPorPerfilIntegrationTest {
 		Organizacao secretaria = secretaria(prefeitura);
 		Organizacao outraPrefeitura = prefeitura("Campina Grande");
 
-		vinculo(adminPrefeitura, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
-		vinculo(operadorSecretaria, secretaria, PapelUsuario.ADMIN_SECRETARIA);
-		vinculo(adminOutraPrefeitura, outraPrefeitura, PapelUsuario.ADMIN_PREFEITURA);
+		vinculo(adminPrefeitura, prefeitura, PapelUsuario.PREFEITURA);
+		vinculo(operadorSecretaria, secretaria, PapelUsuario.SECRETARIA);
+		vinculo(adminOutraPrefeitura, outraPrefeitura, PapelUsuario.PREFEITURA);
 
 		mockMvc.perform(get("/api/vinculos")
-						.with(jwtUsuario(adminPrefeitura, "MORADOR", "ADMIN_PREFEITURA")))
+						.with(jwtUsuario(adminPrefeitura, "MORADOR", "PREFEITURA")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)));
 	}
@@ -195,11 +196,11 @@ class PermissaoPorPerfilIntegrationTest {
 		Usuario adminSecretaria = usuario(PerfilUsuario.MORADOR);
 		Organizacao prefeitura = prefeitura();
 		Organizacao secretaria = secretaria(prefeitura);
-		vinculo(adminSecretaria, secretaria, PapelUsuario.ADMIN_SECRETARIA);
+		vinculo(adminSecretaria, secretaria, PapelUsuario.SECRETARIA);
 		Denuncia denuncia = denunciaComResponsavel(secretaria);
 
 		mockMvc.perform(patch("/api/denuncias/{denunciaId}/status", denuncia.getId())
-						.with(jwtUsuario(adminSecretaria, "MORADOR", "ADMIN_SECRETARIA"))
+						.with(jwtUsuario(adminSecretaria, "MORADOR", "SECRETARIA"))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -213,17 +214,17 @@ class PermissaoPorPerfilIntegrationTest {
 
 	@Test
 	void devePermitirAdminAppAtualizarVinculoSemErroInterno() throws Exception {
-		Usuario adminApp = usuario(PerfilUsuario.ADMIN_APP);
+		Usuario adminApp = usuario(PerfilUsuario.ADMIN);
 		Usuario operador = usuario(PerfilUsuario.MORADOR);
 		Organizacao prefeitura = prefeitura();
-		VinculoUsuarioOrganizacao vinculo = vinculo(operador, prefeitura, PapelUsuario.ADMIN_PREFEITURA);
+		VinculoUsuarioOrganizacao vinculo = vinculo(operador, prefeitura, PapelUsuario.PREFEITURA);
 
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/vinculos/{vinculoId}", vinculo.getId())
-						.with(jwtUsuario(adminApp, "ADMIN_APP"))
+						.with(jwtUsuario(adminApp, "ADMIN"))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
-								  "papel": "ADMIN_PREFEITURA",
+								  "papel": "PREFEITURA",
 								  "ativo": false
 								}
 								"""))
@@ -237,7 +238,7 @@ class PermissaoPorPerfilIntegrationTest {
 		Usuario adminSecretaria = usuario(PerfilUsuario.MORADOR);
 
 		mockMvc.perform(post("/api/operacional/solicitacoes-transferencia/999/aprovacao")
-						.with(jwtUsuario(adminSecretaria, "MORADOR", "ADMIN_SECRETARIA"))
+						.with(jwtUsuario(adminSecretaria, "MORADOR", "SECRETARIA"))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{

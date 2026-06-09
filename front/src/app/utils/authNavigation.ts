@@ -15,7 +15,7 @@ export function buildLoginRedirectPath(
 }
 
 const pathPrefixesByUserType: Record<UserType, string[]> = {
-  admin_app: ['/admin-app'],
+  admin: ['/admin-app'],
   moderador: ['/moderador'],
   prefeitura: ['/prefeitura'],
   secretaria: ['/secretaria'],

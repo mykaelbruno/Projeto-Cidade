@@ -87,7 +87,7 @@ public class UsuarioService {
 				TipoAcaoAuditoria.USUARIO_CRIADO,
 				TipoAlvoAuditoria.USUARIO,
 				salvo.getId(),
-				"Usuario criado pelo ADMIN_APP.",
+				"Usuario criado pelo ADMIN.",
 				"Perfil global: " + salvo.getPerfilGlobal()
 		);
 		return salvo;
@@ -111,7 +111,7 @@ public class UsuarioService {
 				TipoAcaoAuditoria.USUARIO_ATUALIZADO,
 				TipoAlvoAuditoria.USUARIO,
 				usuario.getId(),
-				"Usuario atualizado pelo ADMIN_APP.",
+				"Usuario atualizado pelo ADMIN.",
 				"Perfil global atual: " + usuario.getPerfilGlobal()
 		);
 		return usuario;
@@ -120,10 +120,10 @@ public class UsuarioService {
 	@Transactional
 	public Usuario alterarAtivo(Long usuarioId, boolean ativo) {
 		Usuario usuario = buscarUsuario(usuarioId);
-		if (!ativo && usuario.getPerfilGlobal() == PerfilUsuario.ADMIN_APP) {
-			long adminsAtivos = usuarioRepository.countByPerfilGlobalAndAtivoTrue(PerfilUsuario.ADMIN_APP);
+		if (!ativo && usuario.getPerfilGlobal() == PerfilUsuario.ADMIN) {
+			long adminsAtivos = usuarioRepository.countByPerfilGlobalAndAtivoTrue(PerfilUsuario.ADMIN);
 			if (adminsAtivos <= 1) {
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nao e permitido desativar o ultimo ADMIN_APP ativo.");
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nao e permitido desativar o ultimo ADMIN ativo.");
 			}
 		}
 		usuario.setAtivo(ativo);
